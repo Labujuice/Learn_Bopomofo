@@ -36,3 +36,21 @@
 
 * [x] **步驟 11：黑名單例外管理（過濾罕見與不存在拼音）**
   * Git Commit: `feat: add bopomofo blacklist to filter rare and non-existent combinations`
+
+---
+
+### 🔄 階段三：題數選擇與強退結算 (進行中)
+
+* [ ] **步驟 12：主畫面新增 10/20/30 題數選擇**
+  * **需求變更**：主頁面新增題數選擇按鈕或選項（10題、20題、30題），預設為 10 題。
+  * **調整範圍**：
+    1. 修改 `index.html`，在關卡選擇上方或下方新增「選擇題數」的 UI。
+    2. 修改 `js/app.js`，將寫死的 10 題改為依據選擇的題數動態生成題目，並更新題目進度文字（如 `第 X / 20 題`）。
+  * **預期 Commit**: `feat: support selectable question counts (10/20/30 questions)`
+
+* [ ] **步驟 13：遊戲中途退出與立即結算**
+  * **需求變更**：遊戲中提供一個「結束/退出」按鈕，點擊時彈出確認視窗（如：「確定要結束並結算目前遊戲嗎？」），如果確認則立即以當下得分進行結算，進入結算畫面。
+  * **調整範圍**：
+    1. 修改 `index.html`，在遊戲畫面頂部或右上角新增「離開」按鈕。
+    2. 修改 `js/app.js`，實作退出與確認邏輯，調用 `endGame` 結算目前分數。
+  * **預期 Commit**: `feat: support force-exit during game with immediate settlement`
