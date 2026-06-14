@@ -82,5 +82,6 @@
     1. 解鎖並預熱 iOS/行動端網頁 TTS 引擎，並在 `cancel()` 與 `speak()` 之間引入延遲防止佇列堵塞。
     2. 聽音選字模式下，將所有單音與組合音的聲調後綴文字移除，避免 TTS 引擎直接唸出「二聲」、「三聲」等字眼。
     3. 實作單音注音符號至清晰中文字對應表（如將 `ㄛ` 對應至 `噢`），避免 TTS 引擎將 standalone `ㄛ` 誤唸為 `ㄨㄛ` 導致發音與選項不符。
+    4. 不論在說音或聽音模式，若拼音中**沒有聲母**（只有韻母或介音，如 `ㄨㄛ`、`ㄧㄢ`、`ㄚ` 等組合），皆不再對其加註聲調符號，以防止 TTS 引擎因無法識別無聲母拼音而直接唸出「二聲」、「三聲」字眼。
   * **調整範圍**：修改 `js/app.js` 中的 `speakBopomofo`，加入 `symbolPronunciationMap` 與 `gameState.gameMode` 判斷分支；更新 `js/audio_synth.js` 以便在 suspended 時自動喚醒音訊。
-  * **預期 Commit**: `fix: resolve Web Speech API silencing and queue hanging on iOS and mobile browsers` 和 `fix: correct single symbol pronunciations and strip tone names in Listen Mode`
+  * **預期 Commit**: `fix: resolve Web Speech API silencing and queue hanging on iOS and mobile browsers`、`fix: correct single symbol pronunciations and strip tone names in Listen Mode` 和 `fix: skip tone marks for syllables without initials in Speak Mode to prevent literal tone name reading`
