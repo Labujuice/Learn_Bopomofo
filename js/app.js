@@ -87,11 +87,29 @@ document.addEventListener('DOMContentLoaded', () => {
     speechSynthesis.onvoiceschanged = loadVoices;
   }
 
+  // 解鎖/預熱 iOS 語音合成 (TTS)
+  function primeTTS() {
+    if (typeof speechSynthesis !== 'undefined') {
+      try {
+        const utterance = new SpeechSynthesisUtterance('');
+        utterance.volume = 0;
+        speechSynthesis.speak(utterance);
+      } catch (e) {
+        console.warn('無法預熱語音合成', e);
+      }
+    }
+  }
+
   // 播放注音發音 (TTS)
   function speakBopomofo(syllable, toneObj) {
     if (typeof speechSynthesis === 'undefined') {
       console.warn('此瀏覽器不支援語音合成 (TTS)');
       return;
+    }
+    
+    // 如果 voices 陣列為空，嘗試重新加載
+    if (!voices || voices.length === 0) {
+      loadVoices();
     }
     
     speechSynthesis.cancel();
@@ -127,7 +145,10 @@ document.addEventListener('DOMContentLoaded', () => {
       utterance.volume = window.AudioManager.sfxVolume;
     }
     
-    speechSynthesis.speak(utterance);
+    // 使用 setTimeout 延遲播放，防止 iOS Safari 佇列堵塞與靜音問題
+    setTimeout(() => {
+      speechSynthesis.speak(utterance);
+    }, 50);
   }
 
   // --- 隨機姓名產生器 ---
@@ -269,6 +290,7 @@ document.addEventListener('DOMContentLoaded', () => {
       
       // 綁定點擊答題事件
       btn.addEventListener('click', () => {
+        primeTTS();
         judgeAnswer(opt.isCorrect);
       });
       
@@ -519,6 +541,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // 點擊後，以一聲（預設無標誌聲調）播放發音
         item.addEventListener('click', () => {
+          primeTTS();
           speakBopomofo(sym, data.tones[0]);
         });
         
@@ -696,6 +719,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // 選擇遊戲模式按鈕事件
   btnModes.forEach(btn => {
     btn.addEventListener('click', () => {
+      primeTTS();
       btnModes.forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       selectedGameMode = btn.getAttribute('data-mode');
@@ -705,6 +729,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // 選擇題數按鈕事件
   btnCounts.forEach(btn => {
     btn.addEventListener('click', () => {
+      primeTTS();
       btnCounts.forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       const countVal = btn.getAttribute('data-count');
@@ -715,16 +740,21 @@ document.addEventListener('DOMContentLoaded', () => {
   // 選擇關卡開始遊戲
   levelBtns.forEach(btn => {
     btn.addEventListener('click', () => {
+      primeTTS();
       const level = parseInt(btn.getAttribute('data-level'));
       startNewGame(level);
     });
   });
 
   // 聽聽看按鈕
-  btnTtsGuide.addEventListener('click', speakCurrentQuestion);
+  btnTtsGuide.addEventListener('click', () => {
+    primeTTS();
+    speakCurrentQuestion();
+  });
 
   // 點擊大注音區可重播聲音 (特別適用於聽力模式)
   bopomofoDisplayBox.addEventListener('click', () => {
+    primeTTS();
     if (gameState.gameMode === 'listen') {
       speakCurrentQuestion();
     }
@@ -743,10 +773,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 結算畫面按鈕
   btnReplay.addEventListener('click', () => {
+    primeTTS();
     startNewGame(gameState.level);
   });
 
   btnGoHome.addEventListener('click', () => {
+    primeTTS();
     showScreen(screenMainMenu);
   });
 
