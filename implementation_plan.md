@@ -46,3 +46,15 @@
 
 * [x] **步驟 13：遊戲中途退出與立即結算**
   * Git Commit: `feat: support force-exit during game with immediate settlement`
+
+---
+
+### 🔄 階段四：無限挑戰賽 (進行中)
+
+* [ ] **步驟 14：新增「無限挑戰」模式**
+  * **需求變更**：新增「無限挑戰」題數選項。在此模式下，遊戲不會限制總題數，題目將在玩家遊玩時動態生成，直到扣完 3 顆心或手動結束退出為止。
+  * **調整範圍**：
+    1. 修改 `index.html`，新增「無限挑戰」按鈕。
+    2. 修改 `css/style.css`，優化 4 顆題數按鈕的響應式排列。
+    3. 修改 `js/app.js`，實作無限模式的動態出題、特有進度顯示（`第 X 題`）以及排行榜紀錄（`X / ♾️`）。
+  * **預期 Commit**: `feat: add Infinite Challenge mode with on-the-fly question generation`
