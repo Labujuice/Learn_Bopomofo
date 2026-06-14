@@ -16,7 +16,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const playerNameInput = document.getElementById('player-name-input');
   const levelBtns = document.querySelectorAll('.btn-level');
   const btnCounts = document.querySelectorAll('.btn-count');
+  const btnModes = document.querySelectorAll('.btn-mode');
   let selectedQuestionCount = 10; // 預設 10 題
+  let selectedGameMode = 'speak'; // 預設為說模式 ('speak' 或 'listen')
   
   const btnOpenSymbols = document.getElementById('btn-open-symbols');
   const btnOpenLeaderboard = document.getElementById('btn-open-leaderboard');
@@ -40,6 +42,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const bopomofoDisplayBox = document.getElementById('bopomofo-display-box');
   const heartsContainer = document.getElementById('hearts-container');
   const feedbackOverlay = document.getElementById('feedback-overlay');
+  const listenOptionsContainer = document.getElementById('listen-options-container');
+  const gameFooter = document.querySelector('.game-footer');
   
   // 結算畫面元素
   const resultTitle = document.getElementById('result-title');
@@ -66,7 +70,8 @@ document.addEventListener('DOMContentLoaded', () => {
     questions: [],
     currentIndex: 0,
     correctCount: 0,
-    isActive: false
+    isActive: false,
+    gameMode: 'speak' // 'speak' 或 'listen'
   };
 
   // --- 語音合成 (TTS) 初始化與優化 ---
@@ -192,11 +197,95 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // --- 遊戲邏輯控制 ---
 
+  // --- 聽音選字選項生成與渲染 ---
+  
+  function generateDistractors(targetSyllable, level) {
+    const data = window.BopomofoData;
+    const distractors = [];
+    let pool = [];
+    
+    if (level === 1) {
+      pool = data.allSymbols;
+    } else if (level === 2) {
+      pool = data.twoPinyinList;
+    } else if (level === 3) {
+      pool = data.threePinyinList;
+    } else if (level === 4) {
+      pool = [...data.twoPinyinList, ...data.threePinyinList];
+    }
+    
+    // 過濾掉與目標相同，以及在黑名單中的音
+    const filteredPool = pool.filter(s => s !== targetSyllable && (!data.blacklist || !data.blacklist.includes(s)));
+    
+    // 隨機選取三個不重複的干擾項
+    while (distractors.length < 3 && filteredPool.length > 0) {
+      const idx = Math.floor(Math.random() * filteredPool.length);
+      const item = filteredPool[idx];
+      if (!distractors.includes(item)) {
+        distractors.push(item);
+        filteredPool.splice(idx, 1); // 避免重複選取
+      }
+    }
+    
+    // 防呆處理
+    while (distractors.length < 3) {
+      distractors.push(targetSyllable);
+    }
+    
+    return distractors;
+  }
+
+  function renderListenOptions(q) {
+    const data = window.BopomofoData;
+    const distractors = generateDistractors(q.syllable, gameState.level);
+    
+    // 建立選項列表 (選項均共享與目標題目相同的聲調，測試注音字元辨識度)
+    const optionsList = [q.syllable, ...distractors].map(s => {
+      return { syllable: s, tone: q.tone, isCorrect: s === q.syllable };
+    });
+    
+    // 隨機打亂選項順序 (Fisher-Yates Shuffle)
+    for (let i = optionsList.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [optionsList[i], optionsList[j]] = [optionsList[j], optionsList[i]];
+    }
+    
+    // 渲染
+    listenOptionsContainer.innerHTML = '';
+    optionsList.forEach(opt => {
+      const btn = document.createElement('button');
+      btn.className = 'btn-option';
+      
+      const chars = opt.syllable.split('');
+      const lenClass = `len-${chars.length}`;
+      const charStackHtml = chars.map(c => `<span>${c}</span>`).join('');
+      
+      btn.innerHTML = `
+        <div class="bopomofo-char-stack ${lenClass}">
+          ${charStackHtml}
+        </div>
+        ${opt.tone.mark ? `<span class="bopomofo-tone ${opt.tone.class}">${opt.tone.mark}</span>` : ''}
+      `;
+      
+      // 綁定點擊答題事件
+      btn.addEventListener('click', () => {
+        judgeAnswer(opt.isCorrect);
+      });
+      
+      listenOptionsContainer.appendChild(btn);
+    });
+  }
+
+  // --- 遊戲邏輯控制 ---
+
   function startNewGame(level) {
     let name = playerNameInput.value.trim();
     if (!name) {
       name = getRandomPlayerName();
     }
+    
+    // 儲存遊玩模式
+    gameState.gameMode = selectedGameMode;
     
     gameState.playerName = name;
     gameState.level = level;
@@ -211,6 +300,21 @@ document.addEventListener('DOMContentLoaded', () => {
     gamePlayerName.textContent = name;
     gameScore.textContent = '0';
     updateHearts();
+    
+    // 依模式調整 UI 顯示狀態
+    if (gameState.gameMode === 'listen') {
+      // 聽音模式：隱藏底部手動評判按鈕，顯示選項區域，隱藏發音提示鈕
+      gameFooter.classList.add('hidden');
+      listenOptionsContainer.classList.remove('hidden');
+      btnTtsGuide.classList.add('hidden');
+      bopomofoDisplayBox.classList.add('speaker-mode');
+    } else {
+      // 說音模式：顯示底部評判按鈕，隱藏選項區域，顯示發音提示鈕
+      gameFooter.classList.remove('hidden');
+      listenOptionsContainer.classList.add('hidden');
+      btnTtsGuide.classList.remove('hidden');
+      bopomofoDisplayBox.classList.remove('speaker-mode');
+    }
     
     showScreen(screenGame);
     
@@ -255,19 +359,31 @@ document.addEventListener('DOMContentLoaded', () => {
       questionProgress.textContent = `第 ${gameState.currentIndex + 1} / ${gameState.questions.length} 題`;
     }
     
-    const chars = q.syllable.split('');
-    const lenClass = `len-${chars.length}`;
-    const charStackHtml = chars.map(c => `<span>${c}</span>`).join('');
-    
-    bopomofoDisplayBox.innerHTML = `
-      <div class="bopomofo-char-stack ${lenClass}">
-        ${charStackHtml}
-      </div>
-      ${q.tone.mark ? `<span class="bopomofo-tone ${q.tone.class}">${q.tone.mark}</span>` : ''}
-    `;
-    
-    // 出題時不應自動朗讀題目給小朋友，由主持人按下「聽正確發音」按鈕後播放
-    // speakCurrentQuestion();
+    if (gameState.gameMode === 'listen') {
+      // 聽音模式：大盒子為播放器，不顯示注音符號
+      bopomofoDisplayBox.innerHTML = '';
+      
+      // 生成 4 個選項並渲染
+      renderListenOptions(q);
+      
+      // 聽音模式在出題時必須自動發音，讓小朋友聽
+      speakCurrentQuestion();
+    } else {
+      // 說音模式：正常顯示注音符號
+      const chars = q.syllable.split('');
+      const lenClass = `len-${chars.length}`;
+      const charStackHtml = chars.map(c => `<span>${c}</span>`).join('');
+      
+      bopomofoDisplayBox.innerHTML = `
+        <div class="bopomofo-char-stack ${lenClass}">
+          ${charStackHtml}
+        </div>
+        ${q.tone.mark ? `<span class="bopomofo-tone ${q.tone.class}">${q.tone.mark}</span>` : ''}
+      `;
+      
+      // 說音模式不自動朗讀
+      // speakCurrentQuestion();
+    }
   }
 
   function speakCurrentQuestion() {
@@ -348,7 +464,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     resultPlayerName.textContent = gameState.playerName;
-    resultLevel.textContent = `Lv.${gameState.level}`;
+    resultLevel.textContent = `Lv.${gameState.level} (${gameState.gameMode === 'listen' ? '聽' : '說'})`;
     resultScore.textContent = `${finalScore} 分 ${isWon ? '(含通關紅利+10)' : ''}`;
     resultAccuracy.textContent = accuracyStr;
     
@@ -376,6 +492,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const newRecord = {
       name: gameState.playerName,
       level: gameState.level,
+      gameMode: gameState.gameMode || 'speak',
       score: finalScore,
       accuracy: accuracyStr,
       date: datetime
@@ -448,10 +565,11 @@ document.addEventListener('DOMContentLoaded', () => {
     
     filtered.forEach((r, idx) => {
       const tr = document.createElement('tr');
+      const modeStr = r.gameMode === 'listen' ? '聽' : '說';
       tr.innerHTML = `
         <td>${idx + 1}</td>
         <td>${escapeHtml(r.name)}</td>
-        <td>Lv.${r.level}</td>
+        <td>Lv.${r.level} (${modeStr})</td>
         <td>${r.score}分</td>
         <td>${r.date}</td>
       `;
@@ -575,6 +693,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  // 選擇遊戲模式按鈕事件
+  btnModes.forEach(btn => {
+    btn.addEventListener('click', () => {
+      btnModes.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      selectedGameMode = btn.getAttribute('data-mode');
+    });
+  });
+
   // 選擇題數按鈕事件
   btnCounts.forEach(btn => {
     btn.addEventListener('click', () => {
@@ -595,6 +722,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 聽聽看按鈕
   btnTtsGuide.addEventListener('click', speakCurrentQuestion);
+
+  // 點擊大注音區可重播聲音 (特別適用於聽力模式)
+  bopomofoDisplayBox.addEventListener('click', () => {
+    if (gameState.gameMode === 'listen') {
+      speakCurrentQuestion();
+    }
+  });
 
   // 離開/強退按鈕
   btnGameExit.addEventListener('click', () => {
