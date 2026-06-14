@@ -202,7 +202,8 @@ document.addEventListener('DOMContentLoaded', () => {
     gameState.level = level;
     gameState.score = 0;
     gameState.lives = 3;
-    gameState.questions = generateQuestionList(level, selectedQuestionCount);
+    const countToGenerate = selectedQuestionCount === 'infinite' ? 1 : selectedQuestionCount;
+    gameState.questions = generateQuestionList(level, countToGenerate);
     gameState.currentIndex = 0;
     gameState.correctCount = 0;
     gameState.isActive = true;
@@ -234,13 +235,25 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function loadQuestion() {
-    if (gameState.currentIndex >= gameState.questions.length) {
-      endGame(true);
-      return;
+    if (selectedQuestionCount === 'infinite') {
+      // 無限挑戰模式：動態生成新題目，確保不會越界
+      if (gameState.currentIndex >= gameState.questions.length) {
+        const nextQ = generateQuestionList(gameState.level, 1)[0];
+        gameState.questions.push(nextQ);
+      }
+    } else {
+      if (gameState.currentIndex >= gameState.questions.length) {
+        endGame(true);
+        return;
+      }
     }
     
     const q = gameState.questions[gameState.currentIndex];
-    questionProgress.textContent = `第 ${gameState.currentIndex + 1} / ${gameState.questions.length} 題`;
+    if (selectedQuestionCount === 'infinite') {
+      questionProgress.textContent = `第 ${gameState.currentIndex + 1} 題 (無限挑戰)`;
+    } else {
+      questionProgress.textContent = `第 ${gameState.currentIndex + 1} / ${gameState.questions.length} 題`;
+    }
     
     const chars = q.syllable.split('');
     const lenClass = `len-${chars.length}`;
@@ -321,8 +334,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     let finalScore = gameState.score;
-    const totalQuestions = gameState.questions.length;
-    const accuracyStr = `${gameState.correctCount} / ${totalQuestions}`;
+    const accuracyStr = selectedQuestionCount === 'infinite' ?
+      `答對 ${gameState.correctCount} 題 (無限挑戰)` :
+      `${gameState.correctCount} / ${gameState.questions.length}`;
     
     if (isWon) {
       finalScore += 10; // 通關紅利
@@ -355,11 +369,15 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function saveToLeaderboard(finalScore, datetime) {
+    const accuracyStr = selectedQuestionCount === 'infinite' ?
+      `答對 ${gameState.correctCount} 題 (無限)` :
+      `${gameState.correctCount}/${gameState.questions.length}`;
+      
     const newRecord = {
       name: gameState.playerName,
       level: gameState.level,
       score: finalScore,
-      accuracy: `${gameState.correctCount}/${gameState.questions.length}`,
+      accuracy: accuracyStr,
       date: datetime
     };
     
@@ -562,7 +580,8 @@ document.addEventListener('DOMContentLoaded', () => {
     btn.addEventListener('click', () => {
       btnCounts.forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-      selectedQuestionCount = parseInt(btn.getAttribute('data-count'));
+      const countVal = btn.getAttribute('data-count');
+      selectedQuestionCount = countVal === 'infinite' ? 'infinite' : parseInt(countVal);
     });
   });
 

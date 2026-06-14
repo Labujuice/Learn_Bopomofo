@@ -237,7 +237,7 @@ body {
 
 .count-buttons {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-columns: repeat(4, 1fr);
   gap: 12px;
 }
 
@@ -973,6 +973,10 @@ body {
   .level-buttons {
     grid-template-columns: 1fr;
     gap: 12px;
+  }
+  
+  .count-buttons {
+    grid-template-columns: repeat(2, 1fr);
   }
   
   .menu-footer-buttons {
