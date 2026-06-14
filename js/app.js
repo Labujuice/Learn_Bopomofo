@@ -100,6 +100,20 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // 對應單音注音符號的清晰中文字（主要用於聽音選字模式與注音符號表，以利清晰發音且不唸出「幾聲」）
+  const symbolPronunciationMap = {
+    'ㄅ': '玻', 'ㄆ': '坡', 'ㄇ': '摸', 'ㄈ': '佛',
+    'ㄉ': '得', 'ㄊ': '特', 'ㄋ': '訥', 'ㄌ': '勒',
+    'ㄍ': '哥', 'ㄎ': '科', 'ㄏ': '喝',
+    'ㄐ': '基', 'ㄑ': '欺', 'ㄒ': '希',
+    'ㄓ': '知', 'ㄔ': '吃', 'ㄕ': '詩', 'ㄖ': '日',
+    'ㄗ': '資', 'ㄘ': '雌', 'ㄙ': '思',
+    'ㄧ': '衣', 'ㄨ': '屋', 'ㄩ': '迂',
+    'ㄚ': '啊', 'ㄛ': '噢', 'ㄜ': '婀', 'ㄝ': '誒',
+    'ㄞ': '哀', 'ㄟ': '誒', 'ㄠ': '凹', 'ㄡ': '歐',
+    'ㄢ': '安', 'ㄣ': '恩', 'ㄤ': '昂', 'ㄥ': '亨', 'ㄦ': '兒'
+  };
+
   // 播放注音發音 (TTS)
   function speakBopomofo(syllable, toneObj) {
     if (typeof speechSynthesis === 'undefined') {
@@ -116,16 +130,36 @@ document.addEventListener('DOMContentLoaded', () => {
     
     let textToSpeak = syllable;
     
-    // 針對單一符號的聲調處理 (Lv.1 與 注音符號表)
-    if (syllable.length === 1) {
-      const isInitial = window.BopomofoData.initials.includes(syllable);
-      if (isInitial) {
-        textToSpeak = `${syllable}，唸${toneObj.name}`;
+    // 聽音選字模式（Listen Mode）特別處理
+    if (gameState.gameMode === 'listen') {
+      if (syllable.length === 1) {
+        // 單音（Level 1）：使用中文字對應表，確保發音清晰（如 ㄛ 唸「噢」不唸「ㄨㄛ」，並且不唸出「幾聲」）
+        if (symbolPronunciationMap[syllable]) {
+          textToSpeak = symbolPronunciationMap[syllable];
+        } else {
+          textToSpeak = syllable;
+        }
+      } else {
+        // 組合音（Level 2, 3, 4）：聽音模式下只朗讀拼音本身，移除聲調符號，避免 TTS 引擎將聲調符號（如 ˊ ˇ ˋ ˙）直接唸出「二聲」、「三聲」等字眼
+        textToSpeak = syllable;
+      }
+    } else {
+      // 原本的說音模式（Speak Mode）：保留聲調朗讀與符號提示
+      if (syllable.length === 1) {
+        const isInitial = window.BopomofoData.initials.includes(syllable);
+        if (isInitial) {
+          textToSpeak = `${syllable}，唸${toneObj.name}`;
+        } else {
+          // 對於單一韻母，也支援 ㄛ 唸「噢」的優化防呆，避免說模式下播放提示音不準
+          if (syllable === 'ㄛ') {
+            textToSpeak = '噢';
+          } else {
+            textToSpeak = syllable + toneObj.mark;
+          }
+        }
       } else {
         textToSpeak = syllable + toneObj.mark;
       }
-    } else {
-      textToSpeak = syllable + toneObj.mark;
     }
     
     const utterance = new SpeechSynthesisUtterance(textToSpeak);
