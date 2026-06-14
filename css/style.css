@@ -947,12 +947,25 @@ body {
     height: 300px;
   }
   
-  .bopomofo-text {
-    font-size: 10rem;
+  .bopomofo-char-stack.len-1 span {
+    font-size: 9.5rem;
+  }
+  .bopomofo-char-stack.len-2 span {
+    font-size: 6.5rem;
+  }
+  .bopomofo-char-stack.len-3 span {
+    font-size: 5rem;
   }
   
   .btn-judge {
     font-size: 1.6rem;
     padding: 24px;
   }
+}
+
+/* 11. 電視遙控器與鍵盤 Focus 亮顯設計 */
+.btn:focus, input:focus, .symbol-item:focus, .tab-btn:focus {
+  outline: 4px solid var(--color-primary);
+  outline-offset: 4px;
+  box-shadow: 0 0 0 8px rgba(108, 92, 231, 0.2);
 }

@@ -567,6 +567,25 @@ document.addEventListener('DOMContentLoaded', () => {
     showScreen(screenMainMenu);
   });
 
+  // --- 鍵盤/電視遙控器快捷鍵監聽 ---
+  window.addEventListener('keydown', (e) => {
+    // 只有當遊戲進行畫面處於顯示狀態，且目前為活躍答題狀態時才處理
+    if (screenGame.classList.contains('hidden') || !gameState.isActive) return;
+    
+    const key = e.key.toLowerCase();
+    
+    if (key === 'o' || e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault(); // 阻止空白鍵造成網頁捲動
+      judgeAnswer(true);
+    } else if (key === 'x' || e.key === 'Escape' || e.key === 'Backspace') {
+      e.preventDefault();
+      judgeAnswer(false);
+    } else if (key === 's' || key === 'v' || key === 'p') {
+      e.preventDefault();
+      speakCurrentQuestion();
+    }
+  });
+
   // --- 初始化啟動 ---
   initSettings();
 
@@ -574,5 +593,5 @@ document.addEventListener('DOMContentLoaded', () => {
   window.speakBopomofo = speakBopomofo;
   window.judgeAnswer = judgeAnswer;
 
-  console.log('完整遊戲功能加載完成（注音表、排行榜、設定已連結）！');
+  console.log('完整遊戲功能加載完成（包含鍵盤/遙控器支援）！');
 });
