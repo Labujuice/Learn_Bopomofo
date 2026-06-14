@@ -3,14 +3,258 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ㄅㄆㄇㄈ 發音出題機</title>
+  <title>🌟 ㄅㄆㄇㄈ 注音發音出題機 🌟</title>
+  <!-- 引入 Google Fonts (Outfit 和 Noto Sans TC) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-  <div id="app">
-    <!-- 這裡將實作主畫面、遊戲畫面與結算畫面 -->
-    <h1>ㄅㄆㄇㄈ 發音出題機</h1>
-    <p>載入中...</p>
+  <!-- 答題視覺反饋覆蓋層 (圈圈/叉叉動畫) -->
+  <div id="feedback-overlay" class="feedback-overlay hidden">
+    <div class="feedback-icon"></div>
+  </div>
+
+  <div class="app-container">
+    
+    <!-- 1. 主選單畫面 -->
+    <section id="main-menu" class="screen active">
+      <div class="header-logo">
+        <span class="logo-emoji">🎈</span>
+        <h1>ㄅㄆㄇㄈ<br><span class="subtitle">發音出題機</span></h1>
+      </div>
+
+      <div class="menu-card">
+        <!-- 姓名輸入框 -->
+        <div class="input-group">
+          <label for="player-name-input">输入你的名字：</label>
+          <input type="text" id="player-name-input" placeholder="例如：小明 (留空隨機水果名)" maxlength="15">
+        </div>
+
+        <!-- 關卡選擇 -->
+        <div class="level-selection">
+          <h2>選擇遊戲關卡</h2>
+          <div class="level-buttons">
+            <button class="btn btn-level" data-level="1">
+              <span class="level-num">Lv.1</span>
+              <span class="level-title">🌟 符號召喚師</span>
+              <span class="level-desc">基礎 37 符號與聲調</span>
+            </button>
+            <button class="btn btn-level" data-level="2">
+              <span class="level-num">Lv.2</span>
+              <span class="level-title">⚔️ 雙音雙打組</span>
+              <span class="level-desc">兩拼與結合韻</span>
+            </button>
+            <button class="btn btn-level" data-level="3">
+              <span class="level-num">Lv.3</span>
+              <span class="level-title">🏰 三音大合奏</span>
+              <span class="level-desc">完整三拼組合</span>
+            </button>
+            <button class="btn btn-level" data-level="4">
+              <span class="level-num">Lv.4</span>
+              <span class="level-title">🏆 終極解碼王</span>
+              <span class="level-desc">兩拼/三拼隨機混合</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 輔助選單 -->
+        <div class="menu-footer-buttons">
+          <button id="btn-open-symbols" class="btn btn-secondary">📖 注音符號表</button>
+          <button id="btn-open-leaderboard" class="btn btn-secondary">🏆 排行榜</button>
+          <button id="btn-open-settings" class="btn btn-secondary">⚙️ 設定</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. 遊戲進行畫面 -->
+    <section id="game-screen" class="screen hidden">
+      <!-- 頂部資訊欄 -->
+      <header class="game-header">
+        <div class="player-info">
+          <span class="info-label">挑戰者:</span>
+          <span id="game-player-name" class="info-value">小明</span>
+        </div>
+        <div class="hearts-container" id="hearts-container">
+          <span class="heart">❤️</span>
+          <span class="heart">❤️</span>
+          <span class="heart">❤️</span>
+        </div>
+        <div class="score-info">
+          <span class="info-label">得分:</span>
+          <span id="game-score" class="info-value">0</span>
+        </div>
+      </header>
+
+      <!-- 中間出題顯示界面 (佔據 70% 空間) -->
+      <main class="game-main">
+        <div class="question-container">
+          <div class="question-progress" id="question-progress">第 1 / 10 題</div>
+          
+          <!-- 注音符號大型顯示區 -->
+          <div class="bopomofo-display-box" id="bopomofo-display-box">
+            <!-- 動態插入注音與聲調 -->
+            <span class="bopomofo-text">ㄅ</span>
+            <span class="bopomofo-tone">ˊ</span>
+          </div>
+
+          <!-- 語音發音輔助按鈕 -->
+          <button id="btn-tts-guide" class="btn btn-tts" title="聽聽正確發音">
+            <span class="tts-icon">🔊</span> 聽正確發音
+          </button>
+        </div>
+      </main>
+
+      <!-- 下方評判按鈕 (圈圈與叉叉) -->
+      <footer class="game-footer">
+        <button id="btn-judge-wrong" class="btn btn-judge wrong" title="答錯了 (鍵盤 X / Esc)">
+          <span class="judge-icon">❌</span>
+          <span class="judge-text">答錯了</span>
+        </button>
+        <button id="btn-judge-correct" class="btn btn-judge correct" title="答對了 (鍵盤 O / Space / Enter)">
+          <span class="judge-icon">⭕</span>
+          <span class="judge-text">答對了</span>
+        </button>
+      </footer>
+    </section>
+
+    <!-- 3. 遊戲結算畫面 -->
+    <section id="result-screen" class="screen hidden">
+      <div class="result-card">
+        <div class="result-header" id="result-header">
+          <span class="result-icon">🎉</span>
+          <h2 id="result-title">恭喜通關！</h2>
+        </div>
+
+        <div class="result-body">
+          <div class="result-stat-row">
+            <span>挑戰玩家：</span>
+            <span id="result-player-name" class="stat-value">-</span>
+          </div>
+          <div class="result-stat-row">
+            <span>挑戰等級：</span>
+            <span id="result-level" class="stat-value">-</span>
+          </div>
+          <div class="result-stat-row">
+            <span>獲得分數：</span>
+            <span id="result-score" class="stat-value">-</span>
+          </div>
+          <div class="result-stat-row">
+            <span>答對題數：</span>
+            <span id="result-accuracy" class="stat-value">-</span>
+          </div>
+          <div class="result-stat-row">
+            <span>挑戰時間：</span>
+            <span id="result-datetime" class="stat-value">-</span>
+          </div>
+        </div>
+
+        <div class="result-footer">
+          <button id="btn-replay" class="btn btn-primary">再玩一次 🔄</button>
+          <button id="btn-go-home" class="btn btn-secondary">回主選單 🏠</button>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- ==================== MODALS (彈出視窗) ==================== -->
+
+  <!-- A. 注音符號表 Modal -->
+  <div id="modal-symbols" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>📖 ㄅㄆㄇㄈ 注音符號表</h2>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-tip">💡 提示：點擊任何一個注音符號，可以播放正確發音喔！</p>
+        
+        <!-- 聲母區 -->
+        <div class="symbol-section">
+          <h3>聲母（ㄅ~ㄙ）</h3>
+          <div class="symbol-grid" id="grid-initials"></div>
+        </div>
+        
+        <!-- 介音區 -->
+        <div class="symbol-section">
+          <h3>介音（ㄧ ㄨ ㄩ）</h3>
+          <div class="symbol-grid" id="grid-medials"></div>
+        </div>
+        
+        <!-- 韻母區 -->
+        <div class="symbol-section">
+          <h3>韻母（ㄚ~ㄦ）</h3>
+          <div class="symbol-grid" id="grid-finals"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- B. 排行榜 Modal -->
+  <div id="modal-leaderboard" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>🏆 挑戰排行榜</h2>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <!-- 排行榜分頁標籤 -->
+        <div class="leaderboard-tabs">
+          <button class="tab-btn active" data-tab="all">混合排行</button>
+          <button class="tab-btn" data-tab="1">Lv.1</button>
+          <button class="tab-btn" data-tab="2">Lv.2</button>
+          <button class="tab-btn" data-tab="3">Lv.3</button>
+          <button class="tab-btn" data-tab="4">Lv.4</button>
+        </div>
+
+        <!-- 排行榜表格 -->
+        <div class="leaderboard-table-container">
+          <table class="leaderboard-table">
+            <thead>
+              <tr>
+                <th width="15%">排名</th>
+                <th width="30%">姓名</th>
+                <th width="15%">等級</th>
+                <th width="15%">分數</th>
+                <th width="25%">日期時間</th>
+              </tr>
+            </thead>
+            <tbody id="leaderboard-tbody">
+              <!-- 動態渲染排行榜資料 -->
+            </tbody>
+          </table>
+          <div id="leaderboard-empty" class="leaderboard-empty hidden">
+            😴 目前還沒有記錄，快去挑戰吧！
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- C. 設定 Modal -->
+  <div id="modal-settings" class="modal hidden">
+    <div class="modal-content small">
+      <div class="modal-header">
+        <h2>⚙️ 系統設定</h2>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="setting-item">
+          <label for="volume-bgm">🎵 背景音樂音量 (<span id="val-volume-bgm">30</span>%)</label>
+          <input type="range" id="volume-bgm" min="0" max="100" value="30">
+        </div>
+        <div class="setting-item">
+          <label for="volume-sfx">🔊 遊戲音效音量 (<span id="val-volume-sfx">80</span>%)</label>
+          <input type="range" id="volume-sfx" min="0" max="100" value="80">
+        </div>
+        
+        <div class="setting-actions">
+          <button id="btn-clear-leaderboard" class="btn btn-danger">⚠️ 清除排行榜</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- 引入資料與邏輯 -->
