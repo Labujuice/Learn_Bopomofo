@@ -1,4 +1,4 @@
-// ㄅㄆ模ㄈ 發音出題機 - 核心邏輯、語音與出題生成器
+// ㄅㄆㄇㄈ 發音出題機 - 完整核心邏輯與持久化
 
 document.addEventListener('DOMContentLoaded', () => {
   // --- DOM 元素宣告 ---
@@ -47,6 +47,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const resultDatetime = document.getElementById('result-datetime');
   const resultHeader = document.getElementById('result-header');
 
+  // 設定面板元素
+  const sliderBgm = document.getElementById('volume-bgm');
+  const sliderSfx = document.getElementById('volume-sfx');
+  const valVolumeBgm = document.getElementById('val-volume-bgm');
+  const valVolumeSfx = document.getElementById('val-volume-sfx');
+  const btnClearLeaderboard = document.getElementById('btn-clear-leaderboard');
+
   // --- 遊戲狀態管理 ---
   const gameState = {
     playerName: '',
@@ -83,7 +90,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     let textToSpeak = syllable;
     
-    // 針對單一符號的聲調處理 (Lv.1)
+    // 針對單一符號的聲調處理 (Lv.1 與 注音符號表)
     if (syllable.length === 1) {
       const isInitial = window.BopomofoData.initials.includes(syllable);
       if (isInitial) {
@@ -173,15 +180,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // --- 遊戲邏輯控制 ---
 
-  // 開始新遊戲
   function startNewGame(level) {
-    // 取得或生成玩家名字
     let name = playerNameInput.value.trim();
     if (!name) {
       name = getRandomPlayerName();
     }
     
-    // 初始化狀態
     gameState.playerName = name;
     gameState.level = level;
     gameState.score = 0;
@@ -191,24 +195,19 @@ document.addEventListener('DOMContentLoaded', () => {
     gameState.correctCount = 0;
     gameState.isActive = true;
     
-    // 更新 UI 資訊
     gamePlayerName.textContent = name;
     gameScore.textContent = '0';
     updateHearts();
     
-    // 進入遊戲畫面
     showScreen(screenGame);
     
-    // 開始背景音樂
     if (window.AudioManager) {
       window.AudioManager.startBGM();
     }
     
-    // 載入第一題
     loadQuestion();
   }
 
-  // 更新愛心 UI
   function updateHearts() {
     heartsContainer.innerHTML = '';
     for (let i = 0; i < 3; i++) {
@@ -222,17 +221,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // 載入目前題目
   function loadQuestion() {
     if (gameState.currentIndex >= gameState.questions.length) {
-      endGame(true); // 順利通關
+      endGame(true);
       return;
     }
     
     const q = gameState.questions[gameState.currentIndex];
     questionProgress.textContent = `第 ${gameState.currentIndex + 1} / 10 題`;
     
-    // 拆解字元以支援 CSS 直書堆疊
     const chars = q.syllable.split('');
     const lenClass = `len-${chars.length}`;
     const charStackHtml = chars.map(c => `<span>${c}</span>`).join('');
@@ -244,44 +241,36 @@ document.addEventListener('DOMContentLoaded', () => {
       ${q.tone.mark ? `<span class="bopomofo-tone ${q.tone.class}">${q.tone.mark}</span>` : ''}
     `;
     
-    // 自動播放發音
     speakCurrentQuestion();
   }
 
-  // 播放當前題目發音
   function speakCurrentQuestion() {
     if (!gameState.isActive) return;
     const q = gameState.questions[gameState.currentIndex];
     speakBopomofo(q.syllable, q.tone);
   }
 
-  // 答題評判處理
   function judgeAnswer(isCorrect) {
     if (!gameState.isActive) return;
     
     const currentQuestion = gameState.questions[gameState.currentIndex];
     
     if (isCorrect) {
-      // 答對邏輯
       gameState.score += currentQuestion.scoreValue;
       gameState.correctCount++;
       gameScore.textContent = gameState.score;
       
-      // 播放答對音效與動畫
       if (window.AudioManager) window.AudioManager.playCorrectSound();
       showAnswerFeedback('correct');
     } else {
-      // 答錯邏輯
       gameState.lives--;
       updateHearts();
       
-      // 播放答錯音效與動畫
       if (window.AudioManager) window.AudioManager.playWrongSound();
       showAnswerFeedback('wrong');
       
       if (gameState.lives <= 0) {
         gameState.isActive = false;
-        // 延遲一下讓動畫演完再進入結算
         setTimeout(() => endGame(false), 800);
         return;
       }
@@ -289,7 +278,6 @@ document.addEventListener('DOMContentLoaded', () => {
     
     gameState.currentIndex++;
     
-    // 延遲載入下一題，使答題動畫能被看見
     gameState.isActive = false;
     setTimeout(() => {
       gameState.isActive = true;
@@ -297,7 +285,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 800);
   }
 
-  // 顯示⭕/❌視覺反饋
   function showAnswerFeedback(type) {
     feedbackOverlay.className = `feedback-overlay feedback-${type}`;
     
@@ -313,16 +300,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 700);
   }
 
-  // 遊戲結束結算
   function endGame(isWon) {
     gameState.isActive = false;
     
-    // 停止背景音樂
     if (window.AudioManager) {
       window.AudioManager.stopBGM();
     }
     
-    // 計算通關加分
     let finalScore = gameState.score;
     const accuracyStr = `${gameState.correctCount} / 10`;
     
@@ -330,13 +314,11 @@ document.addEventListener('DOMContentLoaded', () => {
       finalScore += 10; // 通關紅利
       resultTitle.textContent = '恭喜通關！🎉';
       resultHeader.querySelector('.result-icon').textContent = '🏆';
-      resultHeader.classList.remove('lost-title');
     } else {
       resultTitle.textContent = '再接再厲！💪';
       resultHeader.querySelector('.result-icon').textContent = '😢';
     }
     
-    // 更新結算面板
     resultPlayerName.textContent = gameState.playerName;
     resultLevel.textContent = `Lv.${gameState.level}`;
     resultScore.textContent = `${finalScore} 分 ${isWon ? '(含通關紅利+10)' : ''}`;
@@ -353,14 +335,11 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     resultDatetime.textContent = nowStr;
     
-    // 寫入本地排行榜
     saveToLeaderboard(finalScore, nowStr);
     
-    // 切換到結算畫面
     showScreen(screenResult);
   }
 
-  // 儲存至本地排行榜 (localStorage)
   function saveToLeaderboard(finalScore, datetime) {
     const newRecord = {
       name: gameState.playerName,
@@ -374,6 +353,146 @@ document.addEventListener('DOMContentLoaded', () => {
     records.push(newRecord);
     localStorage.setItem('bopomofo_leaderboard', JSON.stringify(records));
   }
+
+  // --- 注音符號表渲染 ---
+  function renderSymbolTable() {
+    const data = window.BopomofoData;
+    const gridInitials = document.getElementById('grid-initials');
+    const gridMedials = document.getElementById('grid-medials');
+    const gridFinals = document.getElementById('grid-finals');
+    
+    function populateGrid(grid, list) {
+      grid.innerHTML = '';
+      list.forEach(sym => {
+        const item = document.createElement('div');
+        item.className = 'symbol-item';
+        item.textContent = sym;
+        
+        // 點擊後，以一聲（預設無標誌聲調）播放發音
+        item.addEventListener('click', () => {
+          speakBopomofo(sym, data.tones[0]);
+        });
+        
+        grid.appendChild(item);
+      });
+    }
+    
+    populateGrid(gridInitials, data.initials);
+    populateGrid(gridMedials, data.medials);
+    populateGrid(gridFinals, data.finals);
+  }
+
+  // --- 排行榜渲染 ---
+  let activeLeaderboardTab = 'all';
+
+  function renderLeaderboard() {
+    const tbody = document.getElementById('leaderboard-tbody');
+    const emptyDiv = document.getElementById('leaderboard-empty');
+    tbody.innerHTML = '';
+    
+    const records = JSON.parse(localStorage.getItem('bopomofo_leaderboard') || '[]');
+    
+    // 依選擇的頁籤篩選等級
+    let filtered = records;
+    if (activeLeaderboardTab !== 'all') {
+      const lv = parseInt(activeLeaderboardTab);
+      filtered = records.filter(r => r.level === lv);
+    }
+    
+    // 排序：分數高至低；若分數相同，日期近至遠
+    filtered.sort((a, b) => {
+      if (b.score !== a.score) {
+        return b.score - a.score;
+      }
+      return new Date(b.date) - new Date(a.date);
+    });
+    
+    if (filtered.length === 0) {
+      emptyDiv.classList.remove('hidden');
+      return;
+    } else {
+      emptyDiv.classList.add('hidden');
+    }
+    
+    filtered.forEach((r, idx) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${idx + 1}</td>
+        <td>${escapeHtml(r.name)}</td>
+        <td>Lv.${r.level}</td>
+        <td>${r.score}分</td>
+        <td>${r.date}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  function escapeHtml(str) {
+    return str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+  // 排行榜頁籤切換
+  const tabBtns = document.querySelectorAll('.tab-btn');
+  tabBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      tabBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      activeLeaderboardTab = btn.getAttribute('data-tab');
+      renderLeaderboard();
+    });
+  });
+
+  // --- 設定與音量管理 ---
+  
+  function initSettings() {
+    const savedBgm = localStorage.getItem('bopomofo_volume_bgm');
+    const savedSfx = localStorage.getItem('bopomofo_volume_sfx');
+    
+    const bgmVolVal = savedBgm !== null ? parseInt(savedBgm) : 30;
+    const sfxVolVal = savedSfx !== null ? parseInt(savedSfx) : 80;
+    
+    sliderBgm.value = bgmVolVal;
+    valVolumeBgm.textContent = bgmVolVal;
+    sliderSfx.value = sfxVolVal;
+    valVolumeSfx.textContent = sfxVolVal;
+    
+    // 初始化設定音量至音訊管理器
+    if (window.AudioManager) {
+      window.AudioManager.setBGMVolume(bgmVolVal / 100);
+      window.AudioManager.setSFXVolume(sfxVolVal / 100);
+    }
+  }
+
+  sliderBgm.addEventListener('input', (e) => {
+    const val = parseInt(e.target.value);
+    valVolumeBgm.textContent = val;
+    if (window.AudioManager) {
+      window.AudioManager.setBGMVolume(val / 100);
+    }
+    localStorage.setItem('bopomofo_volume_bgm', val);
+  });
+
+  sliderSfx.addEventListener('input', (e) => {
+    const val = parseInt(e.target.value);
+    valVolumeSfx.textContent = val;
+    if (window.AudioManager) {
+      window.AudioManager.setSFXVolume(val / 100);
+    }
+    localStorage.setItem('bopomofo_volume_sfx', val);
+  });
+
+  btnClearLeaderboard.addEventListener('click', () => {
+    if (confirm('⚠️ 確定要清除所有的排行榜記錄嗎？此動作將無法還原！')) {
+      localStorage.removeItem('bopomofo_leaderboard');
+      renderLeaderboard();
+      alert('已成功清除所有排行榜記錄。');
+    }
+  });
 
   // --- 畫面與 Modal 切換邏輯 ---
   
@@ -401,10 +520,12 @@ document.addEventListener('DOMContentLoaded', () => {
   // --- 事件監聽器設定 ---
 
   btnOpenSymbols.addEventListener('click', () => {
+    renderSymbolTable();
     openModal(modalSymbols);
   });
 
   btnOpenLeaderboard.addEventListener('click', () => {
+    renderLeaderboard();
     openModal(modalLeaderboard);
   });
 
@@ -446,9 +567,12 @@ document.addEventListener('DOMContentLoaded', () => {
     showScreen(screenMainMenu);
   });
 
-  // 暴露至全域
+  // --- 初始化啟動 ---
+  initSettings();
+
+  // 暴露至全域方便除錯
   window.speakBopomofo = speakBopomofo;
   window.judgeAnswer = judgeAnswer;
 
-  console.log('遊戲核心流程控制模組載入完成！');
+  console.log('完整遊戲功能加載完成（注音表、排行榜、設定已連結）！');
 });
