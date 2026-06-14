@@ -1,6 +1,8 @@
 # 🌟 ㄅㄆㄇㄈ 注音發音出題機 🌟
 
-這是一個專為幼兒園、小學生設計的 **ㄅㄆㄇㄈ 注音符號發音出題機**。採用純前端網頁技術開發，具備童趣的視覺界面、即時合成的音效與背景音樂，以及語音發音輔助（TTS），非常適合家長、老師協助小朋友練習拼音與發音。
+🔗 **線上遊玩網址：[https://labujuice.github.io/Learn_Bopomofo/](https://labujuice.github.io/Learn_Bopomofo/)**
+
+這是一個專為幼兒園、小學生設計的 **ㄅㄆㄇㄈ 注音符號發音出題機**。採用純前端網頁技術開發，具備童趣的視覺界面，即時合成的音效與背景音樂，以及語音發音輔助（TTS），非常適合家長、老師協助小朋友練習拼音與發音。
 
 ---
 
@@ -69,7 +71,7 @@ Learn_Bopomofo/
 請選擇以下任一免費且快速的方式將專案放上網路：
 1. **GitHub Pages (最推薦)**：
    * 將此專案推送至您的 GitHub 儲存庫。
-   * 前往 Settings -> Pages，選擇 `main` 分支並儲存，數分鐘內即可獲得一個免費的 `https://<您的帳號>.github.io/Learn_Bopomofo/` 網址。
+   * 前往 Settings -> Pages，選擇 `main` 分支並儲存，本專案的線上遊玩網址為：[https://labujuice.github.io/Learn_Bopomofo/](https://labujuice.github.io/Learn_Bopomofo/)。
 2. **Vercel / Netlify (零門檻拖放)**：
    * 註冊免費的 [Vercel](https://vercel.com/) 或 [Netlify](https://www.netlify.com/) 帳號。
    * 直接將本專案的資料夾拖放到託管介面中，即可立即生成一個隨機網址。
