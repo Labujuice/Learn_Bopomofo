@@ -26,21 +26,13 @@
 
 ---
 
-### 🔄 階段二：需求精進與調整 (進行中)
+### 🔄 階段二：需求精進與調整 (已完成)
 
-* [ ] **步驟 9：移除 Level 1 聲調限制**
-  * **需求變更**：Level 1（基礎 37 符號認讀）不應該帶有聲調（固定為一聲，不標註聲調符號）。
-  * **調整範圍**：`js/app.js` 的 `generateQuestionList` 出題邏輯。
-  * **預期 Commit**: `refactor: remove tones from Level 1 questions`
+* [x] **步驟 9：移除 Level 1 聲調限制**
+  * Git Commit: `refactor: remove tones from Level 1 questions`
 
-* [ ] **步驟 10：關閉出題時的自動語音發音**
-  * **需求變更**：出題時不應自動播放 TTS 朗讀題目給小朋友，必須由主持人（家長/老師）手動點擊「聽正確發音」按鈕或按下快捷鍵時才播放。
-  * **調整範圍**：`js/app.js` 中的 `loadQuestion` 函式。
-  * **預期 Commit**: `refactor: disable automatic TTS pronunciation on question load`
+* [x] **步驟 10：關閉出題時的自動語音發音**
+  * Git Commit: `refactor: disable automatic TTS pronunciation on question load`
 
-* [ ] **步驟 11：黑名單例外管理（過濾罕見與不存在拼音）**
-  * **需求變更**：過濾現實中不存在或極罕見的注音拼合組合（如 `ㄅㄧㄚ`、`ㄋㄧㄚ`、`ㄔㄨㄚ` 等）。
-  * **調整範圍**：
-    1. 在 `js/bopomofo_data.js` 中建立 `BOPOMOFO_BLACKLIST` 黑名單陣列。
-    2. 在 `js/app.js` 中新增過濾機制，若隨機產生的拼音存在於黑名單中，則自動重新抽題。
-  * **預期 Commit**: `feat: add bopomofo blacklist to filter rare and non-existent combinations`
+* [x] **步驟 11：黑名單例外管理（過濾罕見與不存在拼音）**
+  * Git Commit: `feat: add bopomofo blacklist to filter rare and non-existent combinations`
