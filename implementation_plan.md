@@ -80,8 +80,8 @@
 * [x] **步驟 18：修復 iOS/行動裝置語音與聽音模式下聲調與單字發音不符之問題**
   * **需求變更**：
     1. 解鎖並預熱 iOS/行動端網頁 TTS 引擎，並在 `cancel()` 與 `speak()` 之間引入延遲防止佇列堵塞。
-    2. 聲母部分：只唸聲母本身發音（使用中文字對應表，如 `ㄅ` 唸 `玻`），絕對不加註「唸一聲」或「唸幾聲」字眼。
+    2. 聲母部分：只唸聲母本身發音，將其映射為標準的一聲拼寫組合（如 `ㄅ` 唸 `ㄅㄛ`，`ㄉ` 唸 `ㄉㄜ`），避開有聲調偏差的漢字（如得、特、訥、勒、日），且絕對不加註「唸一聲」或「唸幾聲」字眼。
     3. 韻母、介音及組合拼音部分：正常加上聲調朗讀（如 `ㄚˊ`、`ㄨㄛˊ` 等），而一聲（如 `ㄚ`、`ㄨㄛ`）因沒有聲調符號，語音引擎會自然發出平聲，且不會多唸出「一聲」或「幾聲」字眼。
     4. 實作單音注音符號至清晰中文字對應表（如將 `ㄛ` 對應至 `噢`），避免 TTS 引擎將 standalone `ㄛ` 誤唸為 `ㄨㄛ` 導致發音與選項不符。
   * **調整範圍**：修改 `js/app.js` 中的 `speakBopomofo`，加入 `symbolPronunciationMap` 與 `gameState.gameMode` 判斷分支；更新 `js/audio_synth.js` 以便在 suspended 時自動喚醒音訊。
-  * **預期 Commit**: `fix: resolve Web Speech API silencing and queue hanging on iOS and mobile browsers`、`fix: correct single symbol pronunciations and strip tone names in Listen Mode` 和 `fix: only read the pure sound of initials without tone names, keep tones for finals`
+  * **預期 Commit**: `fix: resolve Web Speech API silencing and queue hanging on iOS and mobile browsers`、`fix: correct single symbol pronunciations and strip tone names in Listen Mode`、`fix: only read the pure sound of initials without tone names, keep tones for finals` 和 `fix: use standard phonetic Bopomofo spellings for initials in pronunciation map to ensure high-quality first-tone readings`
