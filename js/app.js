@@ -130,45 +130,39 @@ document.addEventListener('DOMContentLoaded', () => {
     
     let textToSpeak = syllable;
     
-    // 檢查是否有聲母（只有韻母/介音）
-    const hasInitial = window.BopomofoData.initials.includes(syllable[0]);
+    // 判斷是否為聲母 (initial)
+    const isInitial = window.BopomofoData.initials.includes(syllable);
     
     // 聽音選字模式（Listen Mode）特別處理
     if (gameState.gameMode === 'listen') {
       if (syllable.length === 1) {
-        // 單音（Level 1）：使用中文字對應表，確保發音清晰（如 ㄛ 唸「噢」不唸「ㄨㄛ」，並且不唸出「幾聲」）
+        // 單音（Level 1）：使用中文字對應表，確保發音清晰，且不唸出「幾聲」
         if (symbolPronunciationMap[syllable]) {
           textToSpeak = symbolPronunciationMap[syllable];
         } else {
           textToSpeak = syllable;
         }
       } else {
-        // 組合音（Level 2, 3, 4）：聽音模式下只朗讀拼音本身，移除聲調符號，避免 TTS 引擎將聲調符號（如 ˊ ˇ ˋ ˙）直接唸出「二聲」、「三聲」等字眼
-        textToSpeak = syllable;
+        // 組合音（Level 2, 3, 4）：聽音模式下帶聲調朗讀
+        textToSpeak = syllable + toneObj.mark;
       }
     } else {
-      // 原本的說音模式（Speak Mode）：保留聲調朗讀與符號提示
+      // 原本的說音模式（Speak Mode）：保留聲調與符號提示
       if (syllable.length === 1) {
-        const isInitial = window.BopomofoData.initials.includes(syllable);
         if (isInitial) {
-          textToSpeak = `${syllable}，唸${toneObj.name}`;
+          // 聲母：只唸聲母發音（使用對應漢字，如 ㄅ 唸「玻」），絕對不加上「唸幾聲」
+          textToSpeak = symbolPronunciationMap[syllable] || syllable;
         } else {
-          // 對於單一韻母，也支援 ㄛ 唸「噢」的優化防呆，避免說模式下播放提示音不準
+          // 韻母/介音：正常加上聲調朗讀
           if (syllable === 'ㄛ') {
-            textToSpeak = '噢';
+            textToSpeak = '噢' + toneObj.mark;
           } else {
-            // 單一韻母（沒有聲母）不唸幾聲，防止唸出「幾聲」
-            textToSpeak = syllable;
+            textToSpeak = syllable + toneObj.mark;
           }
         }
       } else {
-        if (!hasInitial) {
-          // 沒有聲母的組合音（如 ㄨㄛ、ㄧㄢ 等），不加聲調符號，防止唸出「幾聲」
-          textToSpeak = syllable;
-        } else {
-          // 有聲母的組合音，可以正常加聲調符號，語音引擎會正確合音而不唸出「幾聲」
-          textToSpeak = syllable + toneObj.mark;
-        }
+        // 組合音：帶聲調朗讀
+        textToSpeak = syllable + toneObj.mark;
       }
     }
     
