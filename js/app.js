@@ -130,6 +130,9 @@ document.addEventListener('DOMContentLoaded', () => {
     
     let textToSpeak = syllable;
     
+    // 檢查是否有聲母（只有韻母/介音）
+    const hasInitial = window.BopomofoData.initials.includes(syllable[0]);
+    
     // 聽音選字模式（Listen Mode）特別處理
     if (gameState.gameMode === 'listen') {
       if (syllable.length === 1) {
@@ -154,11 +157,18 @@ document.addEventListener('DOMContentLoaded', () => {
           if (syllable === 'ㄛ') {
             textToSpeak = '噢';
           } else {
-            textToSpeak = syllable + toneObj.mark;
+            // 單一韻母（沒有聲母）不唸幾聲，防止唸出「幾聲」
+            textToSpeak = syllable;
           }
         }
       } else {
-        textToSpeak = syllable + toneObj.mark;
+        if (!hasInitial) {
+          // 沒有聲母的組合音（如 ㄨㄛ、ㄧㄢ 等），不加聲調符號，防止唸出「幾聲」
+          textToSpeak = syllable;
+        } else {
+          // 有聲母的組合音，可以正常加聲調符號，語音引擎會正確合音而不唸出「幾聲」
+          textToSpeak = syllable + toneObj.mark;
+        }
       }
     }
     
