@@ -143,6 +143,7 @@ document.addEventListener('DOMContentLoaded', () => {
       switch (level) {
         case 1:
           syllable = data.allSymbols[Math.floor(Math.random() * data.allSymbols.length)];
+          toneObj = data.tones[0]; // Level 1 固定為一聲，不包含聲調變化
           scoreValue = 1;
           break;
           
