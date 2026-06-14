@@ -242,7 +242,8 @@ document.addEventListener('DOMContentLoaded', () => {
       ${q.tone.mark ? `<span class="bopomofo-tone ${q.tone.class}">${q.tone.mark}</span>` : ''}
     `;
     
-    speakCurrentQuestion();
+    // 出題時不應自動朗讀題目給小朋友，由主持人按下「聽正確發音」按鈕後播放
+    // speakCurrentQuestion();
   }
 
   function speakCurrentQuestion() {
