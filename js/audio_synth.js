@@ -43,7 +43,12 @@ class BopomofoAudioManager {
 
   // 初始化 AudioContext (需在使用者點擊後觸發)
   init() {
-    if (this.audioCtx) return;
+    if (this.audioCtx) {
+      if (this.audioCtx.state === 'suspended') {
+        this.audioCtx.resume();
+      }
+      return;
+    }
     
     try {
       this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();

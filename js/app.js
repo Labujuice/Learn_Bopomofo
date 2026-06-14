@@ -87,6 +87,35 @@ document.addEventListener('DOMContentLoaded', () => {
     speechSynthesis.onvoiceschanged = loadVoices;
   }
 
+  // 解鎖/預熱 iOS 語音合成 (TTS)
+  function primeTTS() {
+    if (typeof speechSynthesis !== 'undefined') {
+      try {
+        const utterance = new SpeechSynthesisUtterance('');
+        utterance.volume = 0;
+        speechSynthesis.speak(utterance);
+      } catch (e) {
+        console.warn('無法預熱語音合成', e);
+      }
+    }
+  }
+
+  // 對應單音注音符號的讀音映射（聲母使用單音符號本身，語音引擎會自然唸出短促的聲母清音「ㄅㄜ、ㄆㄜ」等音，切勿寫成「ㄅㄜ」等非法組合以免卡死）
+  const symbolPronunciationMap = {
+    // 聲母：直接使用單音符號本身，發音即為乾淨的短清音（如 ㄅ 唸出 ㄅㄜ，ㄉ 唸出 ㄉㄜ）
+    'ㄅ': 'ㄅ', 'ㄆ': 'ㄆ', 'ㄇ': 'ㄇ', 'ㄈ': 'ㄈ',
+    'ㄉ': 'ㄉ', 'ㄊ': 'ㄊ', 'ㄋ': 'ㄋ', 'ㄌ': 'ㄌ',
+    'ㄍ': 'ㄍ', 'ㄎ': 'ㄎ', 'ㄏ': 'ㄏ',
+    'ㄐ': 'ㄐ', 'ㄑ': 'ㄑ', 'ㄒ': 'ㄒ',
+    'ㄓ': 'ㄓ', 'ㄔ': 'ㄔ', 'ㄕ': 'ㄕ', 'ㄖ': '日', // ㄖ 維持對應「日」以避免「日一」語音 Bug
+    'ㄗ': 'ㄗ', 'ㄘ': 'ㄘ', 'ㄙ': 'ㄙ',
+    // 介音與韻母
+    'ㄧ': 'ㄧ', 'ㄨ': 'ㄨ', 'ㄩ': 'ㄩ',
+    'ㄚ': 'ㄚ', 'ㄛ': '噢', 'ㄜ': 'ㄜ', 'ㄝ': 'ㄝ',
+    'ㄞ': 'ㄞ', 'ㄟ': 'ㄟ', 'ㄠ': 'ㄠ', 'ㄡ': 'ㄡ',
+    'ㄢ': 'ㄢ', 'ㄣ': 'ㄣ', 'ㄤ': 'ㄤ', 'ㄥ': 'ㄥ', 'ㄦ': 'ㄦ'
+  };
+
   // 播放注音發音 (TTS)
   function speakBopomofo(syllable, toneObj) {
     if (typeof speechSynthesis === 'undefined') {
@@ -94,20 +123,49 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
     
+    // 如果 voices 陣列為空，嘗試重新加載
+    if (!voices || voices.length === 0) {
+      loadVoices();
+    }
+    
     speechSynthesis.cancel();
     
     let textToSpeak = syllable;
     
-    // 針對單一符號的聲調處理 (Lv.1 與 注音符號表)
-    if (syllable.length === 1) {
-      const isInitial = window.BopomofoData.initials.includes(syllable);
-      if (isInitial) {
-        textToSpeak = `${syllable}，唸${toneObj.name}`;
+    // 判斷是否為聲母 (initial)
+    const isInitial = window.BopomofoData.initials.includes(syllable);
+    
+    // 聽音選字模式（Listen Mode）特別處理
+    if (gameState.gameMode === 'listen') {
+      if (syllable.length === 1) {
+        // 單音（Level 1）：使用中文字對應表，確保發音清晰，且不唸出「幾聲」
+        if (symbolPronunciationMap[syllable]) {
+          textToSpeak = symbolPronunciationMap[syllable];
+        } else {
+          textToSpeak = syllable;
+        }
       } else {
+        // 組合音（Level 2, 3, 4）：聽音模式下帶聲調朗讀
         textToSpeak = syllable + toneObj.mark;
       }
     } else {
-      textToSpeak = syllable + toneObj.mark;
+      // 原本的說音模式（Speak Mode）：保留聲調與符號提示
+      if (syllable.length === 1) {
+        if (isInitial) {
+          // 聲母：只唸聲母發音（使用對應漢字，如 ㄅ 唸「玻」），絕對不加上「唸幾聲」
+          textToSpeak = symbolPronunciationMap[syllable] || syllable;
+        } else {
+          // 韻母/介音：正常加上聲調朗讀
+          if (syllable === 'ㄛ') {
+            textToSpeak = '噢' + toneObj.mark;
+          } else {
+            textToSpeak = syllable + toneObj.mark;
+          }
+        }
+      } else {
+        // 組合音：帶聲調朗讀
+        textToSpeak = syllable + toneObj.mark;
+      }
     }
     
     const utterance = new SpeechSynthesisUtterance(textToSpeak);
@@ -127,7 +185,10 @@ document.addEventListener('DOMContentLoaded', () => {
       utterance.volume = window.AudioManager.sfxVolume;
     }
     
-    speechSynthesis.speak(utterance);
+    // 使用 setTimeout 延遲播放，防止 iOS Safari 佇列堵塞與靜音問題
+    setTimeout(() => {
+      speechSynthesis.speak(utterance);
+    }, 50);
   }
 
   // --- 隨機姓名產生器 ---
@@ -269,6 +330,7 @@ document.addEventListener('DOMContentLoaded', () => {
       
       // 綁定點擊答題事件
       btn.addEventListener('click', () => {
+        primeTTS();
         judgeAnswer(opt.isCorrect);
       });
       
@@ -519,6 +581,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // 點擊後，以一聲（預設無標誌聲調）播放發音
         item.addEventListener('click', () => {
+          primeTTS();
           speakBopomofo(sym, data.tones[0]);
         });
         
@@ -696,6 +759,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // 選擇遊戲模式按鈕事件
   btnModes.forEach(btn => {
     btn.addEventListener('click', () => {
+      primeTTS();
       btnModes.forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       selectedGameMode = btn.getAttribute('data-mode');
@@ -705,6 +769,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // 選擇題數按鈕事件
   btnCounts.forEach(btn => {
     btn.addEventListener('click', () => {
+      primeTTS();
       btnCounts.forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       const countVal = btn.getAttribute('data-count');
@@ -715,16 +780,21 @@ document.addEventListener('DOMContentLoaded', () => {
   // 選擇關卡開始遊戲
   levelBtns.forEach(btn => {
     btn.addEventListener('click', () => {
+      primeTTS();
       const level = parseInt(btn.getAttribute('data-level'));
       startNewGame(level);
     });
   });
 
   // 聽聽看按鈕
-  btnTtsGuide.addEventListener('click', speakCurrentQuestion);
+  btnTtsGuide.addEventListener('click', () => {
+    primeTTS();
+    speakCurrentQuestion();
+  });
 
   // 點擊大注音區可重播聲音 (特別適用於聽力模式)
   bopomofoDisplayBox.addEventListener('click', () => {
+    primeTTS();
     if (gameState.gameMode === 'listen') {
       speakCurrentQuestion();
     }
@@ -743,10 +813,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 結算畫面按鈕
   btnReplay.addEventListener('click', () => {
+    primeTTS();
     startNewGame(gameState.level);
   });
 
   btnGoHome.addEventListener('click', () => {
+    primeTTS();
     showScreen(screenMainMenu);
   });
 
