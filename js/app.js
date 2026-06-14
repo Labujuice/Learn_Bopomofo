@@ -139,34 +139,42 @@ document.addEventListener('DOMContentLoaded', () => {
       let syllable = '';
       let toneObj = data.tones[Math.floor(Math.random() * data.tones.length)];
       let scoreValue = 0;
+      let isBlacklisted = true;
       
-      switch (level) {
-        case 1:
-          syllable = data.allSymbols[Math.floor(Math.random() * data.allSymbols.length)];
-          toneObj = data.tones[0]; // Level 1 固定為一聲，不包含聲調變化
-          scoreValue = 1;
-          break;
-          
-        case 2:
-          syllable = data.twoPinyinList[Math.floor(Math.random() * data.twoPinyinList.length)];
-          scoreValue = 2;
-          break;
-          
-        case 3:
-          syllable = data.threePinyinList[Math.floor(Math.random() * data.threePinyinList.length)];
-          scoreValue = 3;
-          break;
-          
-        case 4:
-          const isThreePinyin = Math.random() > 0.5;
-          if (isThreePinyin) {
-            syllable = data.threePinyinList[Math.floor(Math.random() * data.threePinyinList.length)];
-            scoreValue = 3;
-          } else {
+      while (isBlacklisted) {
+        switch (level) {
+          case 1:
+            syllable = data.allSymbols[Math.floor(Math.random() * data.allSymbols.length)];
+            toneObj = data.tones[0]; // Level 1 固定為一聲，不包含聲調變化
+            scoreValue = 1;
+            break;
+            
+          case 2:
             syllable = data.twoPinyinList[Math.floor(Math.random() * data.twoPinyinList.length)];
             scoreValue = 2;
-          }
-          break;
+            break;
+            
+          case 3:
+            syllable = data.threePinyinList[Math.floor(Math.random() * data.threePinyinList.length)];
+            scoreValue = 3;
+            break;
+            
+          case 4:
+            const isThreePinyin = Math.random() > 0.5;
+            if (isThreePinyin) {
+              syllable = data.threePinyinList[Math.floor(Math.random() * data.threePinyinList.length)];
+              scoreValue = 3;
+            } else {
+              syllable = data.twoPinyinList[Math.floor(Math.random() * data.twoPinyinList.length)];
+              scoreValue = 2;
+            }
+            break;
+        }
+        
+        // 檢查是否在黑名單中 (Level 1 單一音符不需要檢查黑名單)
+        if (level === 1 || !data.blacklist || !data.blacklist.includes(syllable)) {
+          isBlacklisted = false;
+        }
       }
       
       questions.push({

@@ -56,13 +56,8 @@ const TWO_PINYIN_LIST = [
   // 介音 + 韻母
   'ㄧㄚ', 'ㄧㄛ', 'ㄧㄝ', 'ㄧㄠ', 'ㄧㄡ', 'ㄧㄢ', 'ㄧㄣ', 'ㄧㄤ', 'ㄧㄥ',
   'ㄨㄚ', 'ㄨㄛ', 'ㄨㄞ', 'ㄨㄟ', 'ㄨㄢ', 'ㄨㄣ', 'ㄨㄤ', 'ㄨㄥ',
-  'ㄩㄝ', 'ㄩ延', 'ㄩㄣ', 'ㄩㄥ' // 修正：ㄩㄢ 常用字
+  'ㄩㄝ', 'ㄩㄢ', 'ㄩㄣ', 'ㄩㄥ'
 ];
-// 修正 ㄩ延 的錯字 -> ㄩㄢ
-const index = TWO_PINYIN_LIST.indexOf('ㄩㄝ');
-if (index !== -1) {
-  TWO_PINYIN_LIST[TWO_PINYIN_LIST.indexOf('ㄩㄝ') + 1] = 'ㄩㄢ';
-}
 
 // 合法的三拼組合清單 (聲母+介音+韻母)
 const THREE_PINYIN_LIST = [
@@ -112,6 +107,17 @@ const FRUIT_NAMES = [
   '芒果', '橘子', '藍莓', '奇異果', '木瓜', '荔枝', '檸檬', '芭樂'
 ];
 
+// 罕見與不存在拼音黑名單 (過濾現實中幾乎不曾使用或非小學常見教材之拼音)
+const BOPOMOFO_BLACKLIST = [
+  'ㄅㄧㄚ', // 𪎿 (無常用字，小學不教)
+  'ㄋㄧㄚ', // 𡠉 (無常用字，小學不教)
+  'ㄔㄨㄚ', // 欻 (極罕見，小學不教)
+  'ㄌㄛ',   // 囉 (極罕見，小學不教)
+  'ㄌㄧㄚ', // 倆 (口語字，一般不單獨在拼音系統中列出教學)
+  'ㄧㄛ',   // 唷 (感嘆詞，無對應基本拼音教學)
+  'ㄉㄟ'    // 得 (口語，極少出現在初學拼音教材)
+];
+
 // 匯出資料 (如果在瀏覽器環境中直接使用，掛載在 window 下即可)
 if (typeof window !== 'undefined') {
   window.BopomofoData = {
@@ -123,6 +129,7 @@ if (typeof window !== 'undefined') {
     twoPinyinList: TWO_PINYIN_LIST,
     threePinyinList: THREE_PINYIN_LIST,
     fruitAdjectives: FRUIT_ADJECTIVES,
-    fruitNames: FRUIT_NAMES
+    fruitNames: FRUIT_NAMES,
+    blacklist: BOPOMOFO_BLACKLIST
   };
 }
