@@ -1,4 +1,4 @@
-// ㄅㄆㄇㄈ 發音出題機 - 核心邏輯、語音與出題生成器
+// ㄅㄆ模ㄈ 發音出題機 - 核心邏輯、語音與出題生成器
 
 document.addEventListener('DOMContentLoaded', () => {
   // --- DOM 元素宣告 ---
@@ -26,17 +26,42 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnGoHome = document.getElementById('btn-go-home');
   const btnTtsGuide = document.getElementById('btn-tts-guide');
   
+  // 遊戲評判按鈕
+  const btnJudgeCorrect = document.getElementById('btn-judge-correct');
+  const btnJudgeWrong = document.getElementById('btn-judge-wrong');
+  
   // 遊戲進行中 UI 元素
   const gamePlayerName = document.getElementById('game-player-name');
   const gameScore = document.getElementById('game-score');
   const questionProgress = document.getElementById('question-progress');
   const bopomofoDisplayBox = document.getElementById('bopomofo-display-box');
   const heartsContainer = document.getElementById('hearts-container');
+  const feedbackOverlay = document.getElementById('feedback-overlay');
+  
+  // 結算畫面元素
+  const resultTitle = document.getElementById('result-title');
+  const resultPlayerName = document.getElementById('result-player-name');
+  const resultLevel = document.getElementById('result-level');
+  const resultScore = document.getElementById('result-score');
+  const resultAccuracy = document.getElementById('result-accuracy');
+  const resultDatetime = document.getElementById('result-datetime');
+  const resultHeader = document.getElementById('result-header');
+
+  // --- 遊戲狀態管理 ---
+  const gameState = {
+    playerName: '',
+    level: 1,
+    score: 0,
+    lives: 3,
+    questions: [],
+    currentIndex: 0,
+    correctCount: 0,
+    isActive: false
+  };
 
   // --- 語音合成 (TTS) 初始化與優化 ---
   let voices = [];
   
-  // 預先載入語音清單 (為了解決 Chrome 非同步載入問題)
   function loadVoices() {
     if (typeof speechSynthesis === 'undefined') return;
     voices = speechSynthesis.getVoices();
@@ -54,7 +79,6 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
     
-    // 取消之前所有正在播放的語音，避免重疊
     speechSynthesis.cancel();
     
     let textToSpeak = syllable;
@@ -63,20 +87,15 @@ document.addEventListener('DOMContentLoaded', () => {
     if (syllable.length === 1) {
       const isInitial = window.BopomofoData.initials.includes(syllable);
       if (isInitial) {
-        // 聲母單獨無法拼出聲調發音，所以唸出「聲母 + 幾聲」
         textToSpeak = `${syllable}，唸${toneObj.name}`;
       } else {
-        // 韻母與介音可以帶聲調發音 (例如：ㄚˊ)
         textToSpeak = syllable + toneObj.mark;
       }
     } else {
-      // 兩拼與三拼直接帶上聲調 (例如：ㄅㄚˊ)
       textToSpeak = syllable + toneObj.mark;
     }
     
     const utterance = new SpeechSynthesisUtterance(textToSpeak);
-    
-    // 尋找台灣 (zh-TW) 的語音
     const twVoice = voices.find(v => v.lang.includes('zh-TW')) || 
                     voices.find(v => v.lang.includes('zh-HK')) || 
                     voices.find(v => v.lang.includes('zh-CN')) || 
@@ -87,9 +106,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     utterance.lang = 'zh-TW';
-    utterance.rate = 0.75; // 速度調慢，適合小朋友聽
+    utterance.rate = 0.75;
     
-    // 音量與系統音效音量同步
     if (window.AudioManager) {
       utterance.volume = window.AudioManager.sfxVolume;
     }
@@ -97,51 +115,48 @@ document.addEventListener('DOMContentLoaded', () => {
     speechSynthesis.speak(utterance);
   }
 
-  // --- 隨機出題生成器 ---
-  
-  // 隨機選取陣列中的一個元素
-  function getRandomElement(arr) {
-    return arr[Math.floor(Math.random() * arr.length)];
+  // --- 隨機姓名產生器 ---
+  function getRandomPlayerName() {
+    const data = window.BopomofoData;
+    const adj = data.fruitAdjectives[Math.floor(Math.random() * data.fruitAdjectives.length)];
+    const fruit = data.fruitNames[Math.floor(Math.random() * data.fruitNames.length)];
+    return adj + fruit;
   }
 
-  // 根據等級生成 10 題的題目清單
+  // --- 隨機出題生成器 ---
   function generateQuestionList(level) {
     const questions = [];
     const data = window.BopomofoData;
     
     for (let i = 0; i < 10; i++) {
       let syllable = '';
-      let toneObj = getRandomElement(data.tones);
+      let toneObj = data.tones[Math.floor(Math.random() * data.tones.length)];
       let scoreValue = 0;
       
       switch (level) {
         case 1:
-          // Lv.1: 37個基礎符號中隨機一個
-          syllable = getRandomElement(data.allSymbols);
+          syllable = data.allSymbols[Math.floor(Math.random() * data.allSymbols.length)];
           scoreValue = 1;
           break;
           
         case 2:
-          // Lv.2: 合法兩拼組合
-          syllable = getRandomElement(data.twoPinyinList);
+          syllable = data.twoPinyinList[Math.floor(Math.random() * data.twoPinyinList.length)];
           scoreValue = 2;
           break;
           
         case 3:
-          // Lv.3: 合法三拼組合
-          syllable = getRandomElement(data.threePinyinList);
+          syllable = data.threePinyinList[Math.floor(Math.random() * data.threePinyinList.length)];
           scoreValue = 3;
           break;
           
         case 4:
-          // Lv.4: 隨機混合兩拼與三拼
           const isThreePinyin = Math.random() > 0.5;
           if (isThreePinyin) {
-            syllable = getRandomElement(data.threePinyinList);
-            scoreValue = 3; // 三拼為 3 分
+            syllable = data.threePinyinList[Math.floor(Math.random() * data.threePinyinList.length)];
+            scoreValue = 3;
           } else {
-            syllable = getRandomElement(data.twoPinyinList);
-            scoreValue = 2; // 兩拼為 2 分
+            syllable = data.twoPinyinList[Math.floor(Math.random() * data.twoPinyinList.length)];
+            scoreValue = 2;
           }
           break;
       }
@@ -156,9 +171,212 @@ document.addEventListener('DOMContentLoaded', () => {
     return questions;
   }
 
+  // --- 遊戲邏輯控制 ---
+
+  // 開始新遊戲
+  function startNewGame(level) {
+    // 取得或生成玩家名字
+    let name = playerNameInput.value.trim();
+    if (!name) {
+      name = getRandomPlayerName();
+    }
+    
+    // 初始化狀態
+    gameState.playerName = name;
+    gameState.level = level;
+    gameState.score = 0;
+    gameState.lives = 3;
+    gameState.questions = generateQuestionList(level);
+    gameState.currentIndex = 0;
+    gameState.correctCount = 0;
+    gameState.isActive = true;
+    
+    // 更新 UI 資訊
+    gamePlayerName.textContent = name;
+    gameScore.textContent = '0';
+    updateHearts();
+    
+    // 進入遊戲畫面
+    showScreen(screenGame);
+    
+    // 開始背景音樂
+    if (window.AudioManager) {
+      window.AudioManager.startBGM();
+    }
+    
+    // 載入第一題
+    loadQuestion();
+  }
+
+  // 更新愛心 UI
+  function updateHearts() {
+    heartsContainer.innerHTML = '';
+    for (let i = 0; i < 3; i++) {
+      const heart = document.createElement('span');
+      heart.className = 'heart';
+      heart.textContent = '❤️';
+      if (i >= gameState.lives) {
+        heart.classList.add('lost');
+      }
+      heartsContainer.appendChild(heart);
+    }
+  }
+
+  // 載入目前題目
+  function loadQuestion() {
+    if (gameState.currentIndex >= gameState.questions.length) {
+      endGame(true); // 順利通關
+      return;
+    }
+    
+    const q = gameState.questions[gameState.currentIndex];
+    questionProgress.textContent = `第 ${gameState.currentIndex + 1} / 10 題`;
+    
+    // 拆解字元以支援 CSS 直書堆疊
+    const chars = q.syllable.split('');
+    const lenClass = `len-${chars.length}`;
+    const charStackHtml = chars.map(c => `<span>${c}</span>`).join('');
+    
+    bopomofoDisplayBox.innerHTML = `
+      <div class="bopomofo-char-stack ${lenClass}">
+        ${charStackHtml}
+      </div>
+      ${q.tone.mark ? `<span class="bopomofo-tone ${q.tone.class}">${q.tone.mark}</span>` : ''}
+    `;
+    
+    // 自動播放發音
+    speakCurrentQuestion();
+  }
+
+  // 播放當前題目發音
+  function speakCurrentQuestion() {
+    if (!gameState.isActive) return;
+    const q = gameState.questions[gameState.currentIndex];
+    speakBopomofo(q.syllable, q.tone);
+  }
+
+  // 答題評判處理
+  function judgeAnswer(isCorrect) {
+    if (!gameState.isActive) return;
+    
+    const currentQuestion = gameState.questions[gameState.currentIndex];
+    
+    if (isCorrect) {
+      // 答對邏輯
+      gameState.score += currentQuestion.scoreValue;
+      gameState.correctCount++;
+      gameScore.textContent = gameState.score;
+      
+      // 播放答對音效與動畫
+      if (window.AudioManager) window.AudioManager.playCorrectSound();
+      showAnswerFeedback('correct');
+    } else {
+      // 答錯邏輯
+      gameState.lives--;
+      updateHearts();
+      
+      // 播放答錯音效與動畫
+      if (window.AudioManager) window.AudioManager.playWrongSound();
+      showAnswerFeedback('wrong');
+      
+      if (gameState.lives <= 0) {
+        gameState.isActive = false;
+        // 延遲一下讓動畫演完再進入結算
+        setTimeout(() => endGame(false), 800);
+        return;
+      }
+    }
+    
+    gameState.currentIndex++;
+    
+    // 延遲載入下一題，使答題動畫能被看見
+    gameState.isActive = false;
+    setTimeout(() => {
+      gameState.isActive = true;
+      loadQuestion();
+    }, 800);
+  }
+
+  // 顯示⭕/❌視覺反饋
+  function showAnswerFeedback(type) {
+    feedbackOverlay.className = `feedback-overlay feedback-${type}`;
+    
+    if (type === 'wrong') {
+      bopomofoDisplayBox.classList.add('shake');
+      setTimeout(() => {
+        bopomofoDisplayBox.classList.remove('shake');
+      }, 500);
+    }
+    
+    setTimeout(() => {
+      feedbackOverlay.className = 'feedback-overlay hidden';
+    }, 700);
+  }
+
+  // 遊戲結束結算
+  function endGame(isWon) {
+    gameState.isActive = false;
+    
+    // 停止背景音樂
+    if (window.AudioManager) {
+      window.AudioManager.stopBGM();
+    }
+    
+    // 計算通關加分
+    let finalScore = gameState.score;
+    const accuracyStr = `${gameState.correctCount} / 10`;
+    
+    if (isWon) {
+      finalScore += 10; // 通關紅利
+      resultTitle.textContent = '恭喜通關！🎉';
+      resultHeader.querySelector('.result-icon').textContent = '🏆';
+      resultHeader.classList.remove('lost-title');
+    } else {
+      resultTitle.textContent = '再接再厲！💪';
+      resultHeader.querySelector('.result-icon').textContent = '😢';
+    }
+    
+    // 更新結算面板
+    resultPlayerName.textContent = gameState.playerName;
+    resultLevel.textContent = `Lv.${gameState.level}`;
+    resultScore.textContent = `${finalScore} 分 ${isWon ? '(含通關紅利+10)' : ''}`;
+    resultAccuracy.textContent = accuracyStr;
+    
+    const nowStr = new Date().toLocaleString('zh-TW', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    });
+    resultDatetime.textContent = nowStr;
+    
+    // 寫入本地排行榜
+    saveToLeaderboard(finalScore, nowStr);
+    
+    // 切換到結算畫面
+    showScreen(screenResult);
+  }
+
+  // 儲存至本地排行榜 (localStorage)
+  function saveToLeaderboard(finalScore, datetime) {
+    const newRecord = {
+      name: gameState.playerName,
+      level: gameState.level,
+      score: finalScore,
+      accuracy: `${gameState.correctCount}/10`,
+      date: datetime
+    };
+    
+    const records = JSON.parse(localStorage.getItem('bopomofo_leaderboard') || '[]');
+    records.push(newRecord);
+    localStorage.setItem('bopomofo_leaderboard', JSON.stringify(records));
+  }
+
   // --- 畫面與 Modal 切換邏輯 ---
   
-  // 切換目前顯示的畫面
   function showScreen(screenToShow) {
     [screenMainMenu, screenGame, screenResult].forEach(screen => {
       screen.classList.add('hidden');
@@ -168,13 +386,11 @@ document.addEventListener('DOMContentLoaded', () => {
     screenToShow.classList.add('active');
   }
 
-  // 開啟 Modal
   function openModal(modal) {
     modal.classList.remove('hidden');
     modal.classList.add('active');
   }
 
-  // 關閉所有 Modals
   function closeAllModals() {
     [modalSymbols, modalLeaderboard, modalSettings].forEach(modal => {
       modal.classList.add('hidden');
@@ -184,7 +400,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // --- 事件監聽器設定 ---
 
-  // 開啟各個 Modal
   btnOpenSymbols.addEventListener('click', () => {
     openModal(modalSymbols);
   });
@@ -197,53 +412,43 @@ document.addEventListener('DOMContentLoaded', () => {
     openModal(modalSettings);
   });
 
-  // 點擊 Modal 關閉按鈕
   modalCloseBtns.forEach(btn => {
     btn.addEventListener('click', closeAllModals);
   });
 
-  // 點擊 Modal 外部背景也可以關閉 Modal
   window.addEventListener('click', (e) => {
     if (e.target.classList.contains('modal')) {
       closeAllModals();
     }
   });
 
-  // 選擇關卡，進入遊戲
+  // 選擇關卡開始遊戲
   levelBtns.forEach(btn => {
     btn.addEventListener('click', () => {
-      const selectedLevel = parseInt(btn.getAttribute('data-level'));
-      let playerName = playerNameInput.value.trim();
-      
-      // 如果未輸入名字，隨機選取水果名 (在步驟 6 實作，目前用預設)
-      if (!playerName) {
-        playerName = '隨機小夥伴';
-      }
-      
-      console.log(`開始遊戲！玩家: ${playerName}, 關卡: Lv.${selectedLevel}`);
-      
-      // 進入遊戲畫面的模擬邏輯
-      gamePlayerName.textContent = playerName;
-      showScreen(screenGame);
-      
-      // 測試隨機生成題目
-      const qs = generateQuestionList(selectedLevel);
-      console.log('生成的題目：', qs);
+      const level = parseInt(btn.getAttribute('data-level'));
+      startNewGame(level);
     });
   });
 
+  // 聽聽看按鈕
+  btnTtsGuide.addEventListener('click', speakCurrentQuestion);
+
+  // 評判按鈕
+  btnJudgeCorrect.addEventListener('click', () => judgeAnswer(true));
+  btnJudgeWrong.addEventListener('click', () => judgeAnswer(false));
+
   // 結算畫面按鈕
   btnReplay.addEventListener('click', () => {
-    showScreen(screenGame);
+    startNewGame(gameState.level);
   });
 
   btnGoHome.addEventListener('click', () => {
     showScreen(screenMainMenu);
   });
 
-  // 暴露至全域方便未來調用與除錯
+  // 暴露至全域
   window.speakBopomofo = speakBopomofo;
-  window.generateQuestionList = generateQuestionList;
+  window.judgeAnswer = judgeAnswer;
 
-  console.log('TTS 語音發音與隨機出題模組載入完成！');
+  console.log('遊戲核心流程控制模組載入完成！');
 });

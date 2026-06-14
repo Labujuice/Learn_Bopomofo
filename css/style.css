@@ -400,14 +400,26 @@ body {
   50% { transform: scale(1.03); box-shadow: 0 16px 36px rgba(108, 92, 231, 0.15); }
 }
 
-.bopomofo-text {
-  font-size: 8.5rem;
-  font-weight: 900;
-  color: var(--color-text-dark);
-  line-height: 1;
+.bopomofo-char-stack {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  line-height: 1.05;
+  font-weight: 900;
+  color: var(--color-text-dark);
+}
+
+.bopomofo-char-stack.len-1 span {
+  font-size: 8rem;
+}
+
+.bopomofo-char-stack.len-2 span {
+  font-size: 5.5rem;
+}
+
+.bopomofo-char-stack.len-3 span {
+  font-size: 4.2rem;
 }
 
 /* 聲調標誌 */
