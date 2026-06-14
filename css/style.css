@@ -511,6 +511,107 @@ body {
   50% { transform: scale(1.03); box-shadow: 0 16px 36px rgba(108, 92, 231, 0.15); }
 }
 
+/* 聽音模式專用：喇叭點擊卡 */
+.bopomofo-display-box.speaker-mode {
+  cursor: pointer;
+  background-color: #f5f3ff;
+  border-color: var(--color-primary);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+}
+
+.bopomofo-display-box.speaker-mode::before {
+  content: "🔊";
+  font-size: 6.5rem;
+  animation: pulseIcon 2.5s ease-in-out infinite;
+}
+
+.bopomofo-display-box.speaker-mode::after {
+  content: "點我重新播放";
+  position: absolute;
+  bottom: 20px;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--color-primary);
+  background-color: #ffffff;
+  padding: 4px 14px;
+  border-radius: 12px;
+  border: 2px solid #e2e8f0;
+  box-shadow: var(--shadow-sm);
+  transition: var(--transition);
+}
+
+.bopomofo-display-box.speaker-mode:hover::after {
+  background-color: var(--color-primary);
+  color: white;
+  border-color: var(--color-primary);
+}
+
+@keyframes pulseIcon {
+  0%, 100% { transform: scale(1) rotate(0); }
+  50% { transform: scale(1.15) rotate(5deg); }
+}
+
+/* 聽音選字 2x2 選項網格 */
+.options-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  width: 100%;
+  max-width: 500px;
+  margin-top: 10px;
+}
+
+.btn-option {
+  background-color: #ffffff;
+  border: 4px solid #e2e8f0;
+  border-radius: var(--radius-md);
+  height: 120px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  cursor: pointer;
+  transition: var(--transition);
+  box-shadow: 0 6px 0 rgba(0, 0, 0, 0.05);
+}
+
+.btn-option:hover {
+  transform: translateY(-4px);
+  border-color: var(--color-primary);
+  box-shadow: 0 10px 0 rgba(108, 92, 231, 0.15);
+}
+
+.btn-option:active {
+  transform: translateY(2px);
+  box-shadow: 0 4px 0 rgba(108, 92, 231, 0.15);
+}
+
+/* 聽音選字選項卡片內的注音大小微調 */
+.btn-option .bopomofo-char-stack.len-1 span {
+  font-size: 3.8rem;
+}
+
+.btn-option .bopomofo-char-stack.len-2 span {
+  font-size: 2.8rem;
+}
+
+.btn-option .bopomofo-char-stack.len-3 span {
+  font-size: 2.2rem;
+}
+
+.btn-option .bopomofo-tone {
+  font-size: 2.2rem;
+}
+
+.btn-option .bopomofo-tone.tone-2 { right: 16px; top: 16px; }
+.btn-option .bopomofo-tone.tone-3 { right: 16px; top: 44px; }
+.btn-option .bopomofo-tone.tone-4 { right: 16px; top: 44px; }
+.btn-option .bopomofo-tone.tone-5 { top: 8px; left: 50%; transform: translateX(-50%); }
+
 .bopomofo-char-stack {
   display: flex;
   flex-direction: column;
