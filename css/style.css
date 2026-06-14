@@ -345,6 +345,37 @@ body {
   padding-bottom: 16px;
   border-bottom: 4px dashed #e2e8f0;
   margin-bottom: 24px;
+  gap: 12px;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.btn-exit {
+  background-color: #ffe3e3;
+  color: #e74c3c;
+  border: 2px solid #ffc9c9;
+  font-size: 1rem;
+  font-weight: 800;
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: var(--transition);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btn-exit:hover {
+  background-color: #ffc9c9;
+  transform: translateY(-2px);
+}
+
+.btn-exit:active {
+  transform: translateY(1px);
 }
 
 .player-info, .score-info {

@@ -27,6 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnReplay = document.getElementById('btn-replay');
   const btnGoHome = document.getElementById('btn-go-home');
   const btnTtsGuide = document.getElementById('btn-tts-guide');
+  const btnGameExit = document.getElementById('btn-game-exit');
   
   // 遊戲評判按鈕
   const btnJudgeCorrect = document.getElementById('btn-judge-correct');
@@ -575,6 +576,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 聽聽看按鈕
   btnTtsGuide.addEventListener('click', speakCurrentQuestion);
+
+  // 離開/強退按鈕
+  btnGameExit.addEventListener('click', () => {
+    if (confirm('確定要結束並結算目前這局遊戲嗎？')) {
+      endGame(false);
+    }
+  });
 
   // 評判按鈕
   btnJudgeCorrect.addEventListener('click', () => judgeAnswer(true));
