@@ -15,6 +15,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // 按鈕與輸入框
   const playerNameInput = document.getElementById('player-name-input');
   const levelBtns = document.querySelectorAll('.btn-level');
+  const btnCounts = document.querySelectorAll('.btn-count');
+  let selectedQuestionCount = 10; // 預設 10 題
   
   const btnOpenSymbols = document.getElementById('btn-open-symbols');
   const btnOpenLeaderboard = document.getElementById('btn-open-leaderboard');
@@ -131,11 +133,11 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // --- 隨機出題生成器 ---
-  function generateQuestionList(level) {
+  function generateQuestionList(level, count = 10) {
     const questions = [];
     const data = window.BopomofoData;
     
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < count; i++) {
       let syllable = '';
       let toneObj = data.tones[Math.floor(Math.random() * data.tones.length)];
       let scoreValue = 0;
@@ -199,7 +201,7 @@ document.addEventListener('DOMContentLoaded', () => {
     gameState.level = level;
     gameState.score = 0;
     gameState.lives = 3;
-    gameState.questions = generateQuestionList(level);
+    gameState.questions = generateQuestionList(level, selectedQuestionCount);
     gameState.currentIndex = 0;
     gameState.correctCount = 0;
     gameState.isActive = true;
@@ -237,7 +239,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     const q = gameState.questions[gameState.currentIndex];
-    questionProgress.textContent = `第 ${gameState.currentIndex + 1} / 10 題`;
+    questionProgress.textContent = `第 ${gameState.currentIndex + 1} / ${gameState.questions.length} 題`;
     
     const chars = q.syllable.split('');
     const lenClass = `len-${chars.length}`;
@@ -318,7 +320,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     let finalScore = gameState.score;
-    const accuracyStr = `${gameState.correctCount} / 10`;
+    const totalQuestions = gameState.questions.length;
+    const accuracyStr = `${gameState.correctCount} / ${totalQuestions}`;
     
     if (isWon) {
       finalScore += 10; // 通關紅利
@@ -355,7 +358,7 @@ document.addEventListener('DOMContentLoaded', () => {
       name: gameState.playerName,
       level: gameState.level,
       score: finalScore,
-      accuracy: `${gameState.correctCount}/10`,
+      accuracy: `${gameState.correctCount}/${gameState.questions.length}`,
       date: datetime
     };
     
@@ -551,6 +554,15 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.target.classList.contains('modal')) {
       closeAllModals();
     }
+  });
+
+  // 選擇題數按鈕事件
+  btnCounts.forEach(btn => {
+    btn.addEventListener('click', () => {
+      btnCounts.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      selectedQuestionCount = parseInt(btn.getAttribute('data-count'));
+    });
   });
 
   // 選擇關卡開始遊戲

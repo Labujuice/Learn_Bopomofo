@@ -221,6 +221,46 @@ body {
   box-shadow: 0 0 0 4px rgba(108, 92, 231, 0.15);
 }
 
+/* 題數選擇 */
+.question-count-selection {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.question-count-selection label {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--color-text-dark);
+  padding-left: 6px;
+}
+
+.count-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+}
+
+.btn-count {
+  font-size: 1.1rem;
+  background-color: #ffffff;
+  color: var(--color-text-dark);
+  border: 3px solid #e2e8f0;
+  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.05);
+}
+
+.btn-count:hover {
+  border-color: var(--color-primary);
+  background-color: #f5f3ff;
+}
+
+.btn-count.active {
+  background-color: var(--color-primary);
+  color: white;
+  border-color: var(--color-primary);
+  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.15);
+}
+
 /* 關卡選擇按鈕 */
 .level-selection h2 {
   font-size: 1.3rem;
