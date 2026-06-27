@@ -4,6 +4,16 @@
 
 ---
 
+## v3.0.0 — iOS 完美發音與背景音樂支援（2026-06-27）
+
+**Branch:** `optimize_pronunciation`
+
+### 🚀 Major Fixes (iOS 終極解法)
+- **單一 Audio 重用模式**: 完全移除了每次發音就 `new Audio()` 的做法，改為在頁面載入時宣告唯一的 `<audio>`，並透過更換 `src` 來重用，徹底解決 iOS 經常性阻擋發音的問題。
+- **背景音樂不被阻擋**: 修正了 TTS 引擎過度頻繁申請 `AudioContext` 導致 iOS 認為額度用盡，進而強制屏蔽遊戲背景音樂的 Bug。現在發音與 BGM 可以完美共存！
+
+---
+
 ## v2.1.0 — 發音精調（2026-06-27）
 
 **Branch:** `optimize_pronunciation`
