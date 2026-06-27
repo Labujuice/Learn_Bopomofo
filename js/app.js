@@ -84,6 +84,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (window.TTSEngine) {
       window.TTSEngine.prime();
     }
+    if (window.AudioManager) {
+      window.AudioManager.init();
+    }
   }
 
   // 播放注音發音 (TTS) - 統一入口

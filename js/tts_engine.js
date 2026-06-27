@@ -271,18 +271,7 @@ class BopomofoTTSEngine {
       } catch (e) {}
     }
 
-    // 2. 解鎖 Web Audio API (保留給未來的背景音樂或音效)
-    try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      const buffer = ctx.createBuffer(1, 1, 22050);
-      const source = ctx.createBufferSource();
-      source.buffer = buffer;
-      source.connect(ctx.destination);
-      source.start(0);
-      ctx.close();
-    } catch (e) {}
-
-    // 3. 預熱 Web Speech API
+    // 2. 預熱 Web Speech API
     if (typeof speechSynthesis !== 'undefined') {
       try {
         const u = new SpeechSynthesisUtterance('');
