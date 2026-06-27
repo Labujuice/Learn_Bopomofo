@@ -74,121 +74,29 @@ document.addEventListener('DOMContentLoaded', () => {
     gameMode: 'speak' // 'speak' 或 'listen'
   };
 
-  // --- 語音合成 (TTS) 初始化與優化 ---
-  let voices = [];
-  
-  function loadVoices() {
-    if (typeof speechSynthesis === 'undefined') return;
-    voices = speechSynthesis.getVoices();
-  }
-  
-  loadVoices();
-  if (typeof speechSynthesis !== 'undefined' && speechSynthesis.onvoiceschanged !== undefined) {
-    speechSynthesis.onvoiceschanged = loadVoices;
-  }
+  // --- 語音合成 (TTS) v2.0 - 使用新的跨平台 TTS 引擎 ---
+  // TTSEngine 已在 tts_engine.js 中初始化為 window.TTSEngine
+  // Layer 1: 靜態音檔 (100% 跨平台一致, 台灣 Google TTS 口音)
+  // Layer 2: Web Speech API 備援 (音檔缺失時使用)
 
-  // 解鎖/預熱 iOS 語音合成 (TTS)
+  // 解鎖/預熱 iOS 音訊政策（需在使用者互動後呼叫）
   function primeTTS() {
-    if (typeof speechSynthesis !== 'undefined') {
-      try {
-        const utterance = new SpeechSynthesisUtterance('');
-        utterance.volume = 0;
-        speechSynthesis.speak(utterance);
-      } catch (e) {
-        console.warn('無法預熱語音合成', e);
-      }
+    if (window.TTSEngine) {
+      window.TTSEngine.prime();
     }
   }
 
-  // 對應單音注音符號的讀音映射（聲母使用單音符號本身，語音引擎會自然唸出短促的聲母清音「ㄅㄜ、ㄆㄜ」等音，切勿寫成「ㄅㄜ」等非法組合以免卡死）
-  const symbolPronunciationMap = {
-    // 聲母：直接使用單音符號本身，發音即為乾淨的短清音（如 ㄅ 唸出 ㄅㄜ，ㄉ 唸出 ㄉㄜ）
-    'ㄅ': 'ㄅ', 'ㄆ': 'ㄆ', 'ㄇ': 'ㄇ', 'ㄈ': 'ㄈ',
-    'ㄉ': 'ㄉ', 'ㄊ': 'ㄊ', 'ㄋ': 'ㄋ', 'ㄌ': 'ㄌ',
-    'ㄍ': 'ㄍ', 'ㄎ': 'ㄎ', 'ㄏ': 'ㄏ',
-    'ㄐ': 'ㄐ', 'ㄑ': 'ㄑ', 'ㄒ': 'ㄒ',
-    'ㄓ': 'ㄓ', 'ㄔ': 'ㄔ', 'ㄕ': 'ㄕ', 'ㄖ': '日', // ㄖ 維持對應「日」以避免「日一」語音 Bug
-    'ㄗ': 'ㄗ', 'ㄘ': 'ㄘ', 'ㄙ': 'ㄙ',
-    // 介音與韻母
-    'ㄧ': 'ㄧ', 'ㄨ': 'ㄨ', 'ㄩ': 'ㄩ',
-    'ㄚ': 'ㄚ', 'ㄛ': '噢', 'ㄜ': 'ㄜ', 'ㄝ': 'ㄝ',
-    'ㄞ': 'ㄞ', 'ㄟ': 'ㄟ', 'ㄠ': 'ㄠ', 'ㄡ': 'ㄡ',
-    'ㄢ': 'ㄢ', 'ㄣ': 'ㄣ', 'ㄤ': 'ㄤ', 'ㄥ': 'ㄥ', 'ㄦ': 'ㄦ'
-  };
-
-  // 播放注音發音 (TTS)
+  // 播放注音發音 (TTS) - 統一入口
   function speakBopomofo(syllable, toneObj) {
-    if (typeof speechSynthesis === 'undefined') {
-      console.warn('此瀏覽器不支援語音合成 (TTS)');
-      return;
-    }
-    
-    // 如果 voices 陣列為空，嘗試重新加載
-    if (!voices || voices.length === 0) {
-      loadVoices();
-    }
-    
-    speechSynthesis.cancel();
-    
-    let textToSpeak = syllable;
-    
-    // 判斷是否為聲母 (initial)
-    const isInitial = window.BopomofoData.initials.includes(syllable);
-    
-    // 聽音選字模式（Listen Mode）特別處理
-    if (gameState.gameMode === 'listen') {
-      if (syllable.length === 1) {
-        // 單音（Level 1）：使用中文字對應表，確保發音清晰，且不唸出「幾聲」
-        if (symbolPronunciationMap[syllable]) {
-          textToSpeak = symbolPronunciationMap[syllable];
-        } else {
-          textToSpeak = syllable;
-        }
-      } else {
-        // 組合音（Level 2, 3, 4）：聽音模式下帶聲調朗讀
-        textToSpeak = syllable + toneObj.mark;
+    if (window.TTSEngine) {
+      // 同步音量設定
+      if (window.AudioManager) {
+        window.TTSEngine.setVolume(window.AudioManager.sfxVolume);
       }
+      window.TTSEngine.speak(syllable, toneObj);
     } else {
-      // 原本的說音模式（Speak Mode）：保留聲調與符號提示
-      if (syllable.length === 1) {
-        if (isInitial) {
-          // 聲母：只唸聲母發音（使用對應漢字，如 ㄅ 唸「玻」），絕對不加上「唸幾聲」
-          textToSpeak = symbolPronunciationMap[syllable] || syllable;
-        } else {
-          // 韻母/介音：正常加上聲調朗讀
-          if (syllable === 'ㄛ') {
-            textToSpeak = '噢' + toneObj.mark;
-          } else {
-            textToSpeak = syllable + toneObj.mark;
-          }
-        }
-      } else {
-        // 組合音：帶聲調朗讀
-        textToSpeak = syllable + toneObj.mark;
-      }
+      console.warn('[TTS] TTSEngine 尚未初始化');
     }
-    
-    const utterance = new SpeechSynthesisUtterance(textToSpeak);
-    const twVoice = voices.find(v => v.lang.includes('zh-TW')) || 
-                    voices.find(v => v.lang.includes('zh-HK')) || 
-                    voices.find(v => v.lang.includes('zh-CN')) || 
-                    voices.find(v => v.lang.includes('zh'));
-                    
-    if (twVoice) {
-      utterance.voice = twVoice;
-    }
-    
-    utterance.lang = 'zh-TW';
-    utterance.rate = 0.75;
-    
-    if (window.AudioManager) {
-      utterance.volume = window.AudioManager.sfxVolume;
-    }
-    
-    // 使用 setTimeout 延遲播放，防止 iOS Safari 佇列堵塞與靜音問題
-    setTimeout(() => {
-      speechSynthesis.speak(utterance);
-    }, 50);
   }
 
   // --- 隨機姓名產生器 ---
@@ -674,10 +582,13 @@ document.addEventListener('DOMContentLoaded', () => {
     sliderSfx.value = sfxVolVal;
     valVolumeSfx.textContent = sfxVolVal;
     
-    // 初始化設定音量至音訊管理器
+    // 初始化設定音量至音訊管理器與 TTS 引擎
     if (window.AudioManager) {
       window.AudioManager.setBGMVolume(bgmVolVal / 100);
       window.AudioManager.setSFXVolume(sfxVolVal / 100);
+    }
+    if (window.TTSEngine) {
+      window.TTSEngine.setVolume(sfxVolVal / 100);
     }
   }
 
@@ -695,6 +606,10 @@ document.addEventListener('DOMContentLoaded', () => {
     valVolumeSfx.textContent = val;
     if (window.AudioManager) {
       window.AudioManager.setSFXVolume(val / 100);
+    }
+    // 同步更新 TTS 引擎音量
+    if (window.TTSEngine) {
+      window.TTSEngine.setVolume(val / 100);
     }
     localStorage.setItem('bopomofo_volume_sfx', val);
   });
