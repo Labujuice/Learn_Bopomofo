@@ -1,5 +1,5 @@
 /**
- * ㄅㄆㄇㄈ 發音引擎 v2.0 - 跨平台一致性解決方案
+ * ㄅㄆㄇㄈ 發音引擎 v2.1 - 跨平台一致性解決方案（含 iOS 修正）
  *
  * 架構：
  *   Layer 1 (優先) - 靜態音檔播放 (100% 一致，來自預先生成的 MP3)
@@ -8,6 +8,11 @@
  * 音檔命名規則：使用注音字元的 Unicode 碼點 Hex 串
  *   單音：例如 ㄅ(U+3105) => "3105.mp3"
  *   組合音+聲調：例如 ㄅㄚ一聲 => "3105_311A_tone1.mp3"
+ *
+ * iOS 注意事項：
+ *   - iOS Safari 要求 audio.play() 必須在 user gesture 的同步/microtask 鏈內呼叫
+ *   - prime() 會用 data-URI 靜音音檔解鎖 <audio> 元素播放權限
+ *   - _playStaticAudio() 直接呼叫 play()，不等待 canplaythrough，確保留在 activation context
  */
 
 class BopomofoTTSEngine {
@@ -33,6 +38,13 @@ class BopomofoTTSEngine {
 
     /** 已確認不存在的音檔 cache */
     this._missingFiles = new Set();
+
+    /**
+     * iOS <audio> 解鎖旗標
+     * iOS Safari 需要在 user gesture 內先 play() 過一次 <audio>，
+     * 之後同一 activation session 內的 audio.play() 才不會被擋。
+     */
+    this._iosAudioUnlocked = false;
 
     // 初始化 Web Speech API 備援
     this._initWebSpeech();
@@ -156,17 +168,25 @@ class BopomofoTTSEngine {
 
   /**
    * 嘗試播放靜態 MP3 音檔
+   *
+   * iOS 關鍵設計：
+   *   直接呼叫 audio.play() 而不等待 canplaythrough。
+   *   原因：iOS Safari 的 user activation 只在 user gesture 的
+   *   同步呼叫鏈及其 microtask（Promise chain）內有效。
+   *   等待 canplaythrough（網路 I/O 事件）時已脫離 activation context，
+   *   iOS 會拋出 NotAllowedError 並 fallback 到 Web Speech API。
+   *
    * @param {string} audioPath - 相對路徑
    * @returns {Promise<boolean>} 是否成功播放
    */
-  async _playStaticAudio(audioPath) {
+  _playStaticAudio(audioPath) {
     // 若已確認缺失，直接跳過
-    if (this._missingFiles.has(audioPath)) return false;
+    if (this._missingFiles.has(audioPath)) return Promise.resolve(false);
 
     // 若 manifest 已載入且不在列表中，直接跳過
     if (this._existingFiles.size > 0 && !this._existingFiles.has(audioPath)) {
       this._missingFiles.add(audioPath);
-      return false;
+      return Promise.resolve(false);
     }
 
     return new Promise((resolve) => {
@@ -174,36 +194,53 @@ class BopomofoTTSEngine {
       audio.volume = this.volume;
       audio.playbackRate = this.playbackRate;
 
-      // 設定較短的 preload 策略（行動裝置友善）
-      audio.preload = 'auto';
-
-      audio.addEventListener('canplaythrough', () => {
-        this._currentAudio = audio;
-        audio.play()
-          .then(() => resolve(true))
-          .catch((err) => {
-            console.warn('[TTS Engine] 音訊播放失敗:', err);
-            resolve(false);
-          });
-      }, { once: true });
-
-      audio.addEventListener('error', (e) => {
-        // 音檔不存在或無法載入
-        this._missingFiles.add(audioPath);
-        this._existingFiles.delete(audioPath);
-        resolve(false);
-      }, { once: true });
-
-      // 2 秒內若無回應，放棄並 fallback
+      // 3 秒 timeout（行動裝置網路較慢）
       const timeout = setTimeout(() => {
         audio.src = '';
         resolve(false);
-      }, 2000);
+      }, 3000);
 
-      audio.addEventListener('canplaythrough', () => clearTimeout(timeout), { once: true });
-      audio.addEventListener('error', () => clearTimeout(timeout), { once: true });
+      /**
+       * 直接呼叫 play()，不等 canplaythrough。
+       * 瀏覽器會在資料緩衝足夠時自動開始播放。
+       * play() 回傳的 Promise 在播放真正開始後 resolve。
+       */
+      const playPromise = audio.play();
 
-      audio.load();
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            clearTimeout(timeout);
+            this._currentAudio = audio;
+            resolve(true);
+          })
+          .catch((err) => {
+            clearTimeout(timeout);
+            if (err.name === 'NotSupportedError') {
+              // 音檔格式不支援或路徑不存在
+              this._missingFiles.add(audioPath);
+              this._existingFiles.delete(audioPath);
+            } else if (err.name === 'NotAllowedError') {
+              // iOS/瀏覽器阻止播放（不在 user activation context）
+              console.warn('[TTS Engine] 播放被阻止（NotAllowedError），請確認已呼叫 prime()');
+            } else {
+              console.warn('[TTS Engine] play() 失敗:', err.name, err.message);
+            }
+            resolve(false);
+          });
+      } else {
+        // 舊版 API（不回傳 Promise）：改用事件監聽
+        audio.addEventListener('playing', () => {
+          clearTimeout(timeout);
+          this._currentAudio = audio;
+          resolve(true);
+        }, { once: true });
+        audio.addEventListener('error', () => {
+          clearTimeout(timeout);
+          this._missingFiles.add(audioPath);
+          resolve(false);
+        }, { once: true });
+      }
     });
   }
 
@@ -287,11 +324,42 @@ class BopomofoTTSEngine {
   }
 
   /**
-   * 解鎖 iOS 音訊（需在使用者互動後呼叫）
-   * iOS 要求用戶互動後才能播放音訊
+   * 解鎖 iOS 音訊（必須在使用者互動事件內同步呼叫）
+   *
+   * iOS Safari 的 <audio> 播放限制：
+   *   任何 audio.play() 都必須在 user gesture（touch/click）的
+   *   同步呼叫內或其 microtask 鏈內發起，否則會被 NotAllowedError 擋掉。
+   *
+   *   修正策略：
+   *   1. 用 data-URI 靜音 WAV 建立 Audio 元素並立即 play()，
+   *      這會「解鎖」iOS 本次 session 的 <audio> 播放權限。
+   *   2. 解鎖 Web Audio API context（背景音樂用）。
+   *   3. 預熱 Web Speech API（備援用）。
    */
   prime() {
-    // 播放一段無聲的音訊以解鎖 iOS Audio Policy
+    // ── 1. 解鎖 <audio> 元素（iOS 最關鍵的步驟）──────────────────────────
+    if (!this._iosAudioUnlocked) {
+      try {
+        // 最小合法 WAV (44 bytes, 靜音, 1 sample @ 8kHz mono)
+        const SILENT_WAV = 'data:audio/wav;base64,' +
+          'UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
+        const unlockAudio = new Audio(SILENT_WAV);
+        unlockAudio.volume = 0;
+        const p = unlockAudio.play();
+        if (p) {
+          p.then(() => {
+            this._iosAudioUnlocked = true;
+            console.log('[TTS Engine] iOS <audio> 解鎖成功');
+          }).catch(() => {
+            // 部分情境下靜音 data-URI 也可能失敗，不影響主流程
+          });
+        }
+      } catch (e) {
+        // 忽略
+      }
+    }
+
+    // ── 2. 解鎖 Web Audio API（背景音樂 BGM 用）───────────────────────────
     try {
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
       const buffer = ctx.createBuffer(1, 1, 22050);
@@ -304,7 +372,7 @@ class BopomofoTTSEngine {
       // 忽略
     }
 
-    // 同時預熱 Web Speech API（備援用）
+    // ── 3. 預熱 Web Speech API（備援層用）─────────────────────────────────
     if (typeof speechSynthesis !== 'undefined') {
       try {
         const u = new SpeechSynthesisUtterance('');
@@ -320,5 +388,5 @@ class BopomofoTTSEngine {
 // ─── 實例化並掛載至全域 ──────────────────────────────────────────────────────
 if (typeof window !== 'undefined') {
   window.TTSEngine = new BopomofoTTSEngine();
-  console.log('[TTS Engine] v2.0 初始化完成（靜態音檔 + Web Speech API 備援）');
+  console.log('[TTS Engine] v2.1 初始化完成（靜態音檔 + iOS 修正 + Web Speech API 備援）');
 }
