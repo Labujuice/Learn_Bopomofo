@@ -1189,3 +1189,27 @@ body {
   outline-offset: 4px;
   box-shadow: 0 0 0 8px rgba(108, 92, 231, 0.2);
 }
+
+/* 12. 系統版本標籤 */
+.app-version {
+  text-align: center;
+  margin-top: 16px;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.app-version a {
+  color: var(--color-text-light);
+  text-decoration: none;
+  padding: 4px 12px;
+  border-radius: 12px;
+  background-color: #f7fafc;
+  border: 1px solid #e2e8f0;
+  transition: var(--transition);
+}
+
+.app-version a:hover {
+  color: var(--color-primary);
+  background-color: #f3f0ff;
+  border-color: #d6bcfa;
+}
